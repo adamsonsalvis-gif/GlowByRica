@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/anti-wrinkle", "destination": "/botox.html" },
+    { "source": "/dermal-fillers", "destination": "/fillers.html" }
+  ]
+}
