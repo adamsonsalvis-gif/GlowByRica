@@ -132,7 +132,7 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         if (targetElement) {
             e.preventDefault();
             targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            history.replaceState(null, null, window.location.pathname);
+            setTimeout(() => history.replaceState(null, null, window.location.pathname), 10);
         }
     });
 });
