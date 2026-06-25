@@ -5,6 +5,7 @@
   ],
   "redirects": [
     { "source": "/botox.html", "destination": "/anti-wrinkle", "permanent": true },
-    { "source": "/fillers.html", "destination": "/dermal-fillers", "permanent": true }
+    { "source": "/fillers.html", "destination": "/dermal-fillers", "permanent": true },
+    { "source": "/index.html", "destination": "/", "permanent": true }
   ]
 }
