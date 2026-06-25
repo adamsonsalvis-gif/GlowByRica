@@ -612,10 +612,11 @@
             .stats-inner { grid-template-columns: 1fr; }
 
             .page-hero {
-                display: block;
+                display: flex;
+                flex-direction: column;
                 position: relative;
-                padding: 1.25rem 170px 1.25rem 1.25rem;
-                min-height: unset;
+                padding: 1.25rem 170px 1.5rem 1.25rem;
+                min-height: 180px;
             }
 
             .page-hero-left {
@@ -638,7 +639,7 @@
                 text-align: left !important;
                 font-size: 1.8rem !important;
                 line-height: 1.1;
-                margin: 0 0 0.4rem !important;
+                margin: auto 0 0.4rem !important;
                 z-index: auto;
             }
 
