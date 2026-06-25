@@ -114,6 +114,15 @@ if (hamburger && navMenu) {
     });
 }
 
+// Clean URL hash on page load and scroll to section
+window.addEventListener('load', () => {
+    if (window.location.hash) {
+        const target = document.querySelector(window.location.hash);
+        if (target) target.scrollIntoView({ behavior: 'instant', block: 'start' });
+        history.replaceState(null, null, window.location.pathname);
+    }
+});
+
 // Book a Consultation buttons — scroll without hash
 document.querySelectorAll('[data-scroll]').forEach(btn => {
     btn.addEventListener('click', function(e) {
