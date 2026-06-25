@@ -116,53 +116,6 @@
         }
         .has-dropdown.open .dropdown-menu { display: block; }
 
-        @media (max-width: 900px) {
-            .page-hero {
-                padding: 0 !important;
-                min-height: 380px;
-                position: relative;
-            }
-
-            .page-hero-right-logo {
-                position: absolute !important;
-                top: 40% !important;
-                left: 50% !important;
-                right: auto !important;
-                transform: translate(-50%, -50%) !important;
-            }
-
-            .page-hero-right-logo img {
-                width: 85vw !important;
-                max-width: 320px !important;
-                mix-blend-mode: multiply;
-            }
-
-            .page-hero h1 {
-                position: absolute !important;
-                bottom: 3.5rem !important;
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                width: 80% !important;
-                text-align: left !important;
-                font-size: 1.4rem !important;
-                z-index: 2;
-                margin: 0 !important;
-            }
-
-            .page-hero p {
-                position: absolute !important;
-                bottom: 1.5rem !important;
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                width: 80% !important;
-                text-align: left !important;
-                font-size: 0.9rem !important;
-                letter-spacing: 0.20em !important;
-                margin: 0 !important;
-                z-index: 2;
-            }
-        }
-
         @media (max-width: 768px) {
             .has-dropdown { position: static; display: block; }
             .dropdown-menu {
@@ -692,6 +645,48 @@
             }
             .info-grid { grid-template-columns: 1fr; }
             .stats-inner { grid-template-columns: 1fr; }
+
+            .page-hero {
+                padding: 0;
+                min-height: 380px;
+            }
+
+            .page-hero-right-logo {
+                top: 40%;
+                left: 50%;
+                right: auto;
+                transform: translate(-50%, -50%);
+            }
+
+            .page-hero-right-logo img {
+                width: 85vw;
+                max-width: 320px;
+                mix-blend-mode: multiply;
+            }
+
+            .page-hero h1 {
+                position: absolute;
+                bottom: 3.5rem;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 80%;
+                text-align: left;
+                font-size: 1.4rem;
+                z-index: 2;
+                margin: 0;
+            }
+
+            .page-hero p {
+                position: absolute;
+                bottom: 1.5rem;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 80%;
+                text-align: left;
+                font-size: 0.9rem;
+                margin: 0;
+                z-index: 2;
+            }
         }
     </style>
 </head>
