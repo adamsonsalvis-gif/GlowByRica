@@ -856,16 +856,6 @@
             autoTimer = setInterval(() => goTo(current + 1), 7000);
         }
 
-        // Smooth transition for Book a Consultation button
-        document.querySelectorAll('.book-cta a').forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const url = this.getAttribute('href');
-                document.body.style.transition = 'opacity 0.4s ease';
-                document.body.style.opacity = '0';
-                setTimeout(() => { window.location.href = url; }, 400);
-            });
-        });
 
         const ham = document.getElementById('hamburger');
         const nav = document.getElementById('main-nav');

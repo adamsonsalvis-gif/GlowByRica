@@ -154,14 +154,6 @@ document.querySelectorAll('section').forEach(section => {
     observer.observe(section);
 });
 
-// Page fade-in on load
-window.addEventListener('load', () => {
-    document.body.style.opacity = '0';
-    document.body.style.transition = 'opacity 0.4s ease';
-    document.body.offsetHeight;
-    document.body.style.opacity = '1';
-});
-
 // Contact form AJAX submission
 const contactForm = document.getElementById('contactForm');
 if (contactForm) {
@@ -187,33 +179,3 @@ if (contactForm) {
     });
 }
 
-// Smooth page transition
-function smoothNavigate(url) {
-    document.body.style.transition = 'opacity 0.4s ease';
-    document.body.style.opacity = '0';
-    setTimeout(() => { window.location.href = url; }, 400);
-}
-
-// Learn More buttons
-document.querySelectorAll('.service-button').forEach(button => {
-    button.addEventListener('click', function (e) {
-        e.preventDefault();
-        smoothNavigate(this.getAttribute('href'));
-    });
-});
-
-// Back to Home links
-document.querySelectorAll('.back-link').forEach(link => {
-    link.addEventListener('click', function (e) {
-        e.preventDefault();
-        smoothNavigate(this.getAttribute('href'));
-    });
-});
-
-// Logo links on service pages
-document.querySelectorAll('.page-hero-left a').forEach(link => {
-    link.addEventListener('click', function (e) {
-        e.preventDefault();
-        smoothNavigate(this.getAttribute('href'));
-    });
-});
