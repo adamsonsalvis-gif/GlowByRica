@@ -951,8 +951,7 @@
 
             .hero-content {
                 position: static;
-                padding: 10rem 1rem 1.5rem !important;
-                text-align: center;
+                padding: 0 !important;
             }
 
             .hero-logo {
@@ -969,24 +968,28 @@
                 display: block !important;
             }
 
-            .hero-content h2,
-            .hero-content p {
-                position: relative;
-                z-index: 2;
-                text-align: center !important;
-            }
-
             .hero-content h2 {
+                position: absolute !important;
+                bottom: 3.5rem !important;
+                left: 0 !important;
+                right: 0 !important;
+                text-align: center !important;
                 font-size: 1.4rem !important;
-                white-space: normal;
-                margin-bottom: 0.25rem !important;
+                white-space: normal !important;
+                z-index: 2;
+                margin: 0 !important;
             }
 
             .hero-content p {
+                position: absolute !important;
+                bottom: 1.5rem !important;
+                left: 0 !important;
+                right: 0 !important;
+                text-align: center !important;
                 font-size: 0.9rem !important;
-                white-space: normal;
-                margin-top: 0 !important;
-                margin-bottom: 0 !important;
+                white-space: normal !important;
+                margin: 0 !important;
+                z-index: 2;
             }
 
             .mobile-logo { display: none !important; }
