@@ -79,15 +79,28 @@ if (heroLogo) {
 // Services dropdown toggle
 const servicesDropdown = document.querySelector('.has-dropdown');
 if (servicesDropdown) {
-    servicesDropdown.querySelector('a').addEventListener('click', function(e) {
+    const servicesLink = servicesDropdown.querySelector('a');
+    const navItems = document.querySelectorAll('#nav-menu > li:not(.has-dropdown)');
+
+    servicesLink.addEventListener('click', function(e) {
         e.preventDefault();
-        servicesDropdown.classList.toggle('open');
+        e.stopPropagation();
+        const isOpen = servicesDropdown.classList.toggle('open');
+
+        // On mobile: hide/show other nav items
+        if (window.innerWidth <= 900) {
+            navItems.forEach(item => {
+                item.style.display = isOpen ? 'none' : '';
+            });
+            if (!isOpen) servicesDropdown.querySelector('.has-dropdown > a, a').textContent = 'Services ▾';
+        }
     });
 
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
         if (!servicesDropdown.contains(e.target)) {
             servicesDropdown.classList.remove('open');
+            navItems.forEach(item => item.style.display = '');
         }
     });
 }
@@ -102,11 +115,15 @@ if (hamburger && navMenu) {
         navMenu.classList.toggle('open');
     });
 
-    // Close menu when a link is clicked
+    // Close menu when a link is clicked (but not the services dropdown toggle)
     navMenu.querySelectorAll('a').forEach(link => {
         link.addEventListener('click', () => {
+            const parentLi = link.closest('li');
+            if (parentLi && parentLi.classList.contains('has-dropdown')) return;
             hamburger.classList.remove('open');
             navMenu.classList.remove('open');
+            // Reset any hidden nav items
+            document.querySelectorAll('#nav-menu > li').forEach(li => li.style.display = '');
         });
     });
 }
