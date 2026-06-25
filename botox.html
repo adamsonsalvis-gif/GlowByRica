@@ -76,6 +76,59 @@
 
         nav a:hover { color: #C9A463; }
 
+        .has-dropdown { position: relative; display: inline-flex; align-items: center; }
+        .has-dropdown > a { display: flex; align-items: center; gap: 0.3rem; }
+        .dropdown-arrow { font-size: 0.7rem; transition: transform 0.3s ease; }
+        .has-dropdown.open .dropdown-arrow { transform: rotate(180deg); }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: #3A0D0D;
+            border: 1px solid rgba(201,164,99,0.4);
+            border-radius: 10px;
+            min-width: 220px;
+            padding: 0.75rem 0 0.5rem;
+            box-shadow: 0 8px 24px rgba(58,13,13,0.35);
+            z-index: 200;
+            list-style: none;
+        }
+
+        .dropdown-menu li a {
+            display: block;
+            padding: 0.75rem 1.25rem;
+            color: #E6DCCB;
+            font-size: 0.82rem;
+            white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-left: 0;
+        }
+
+        .dropdown-menu li a:hover { color: #C9A463; background: rgba(201,164,99,0.08); }
+
+        @media (hover: hover) {
+            .has-dropdown:hover .dropdown-menu { display: block; }
+        }
+        .has-dropdown.open .dropdown-menu { display: block; }
+
+        @media (max-width: 768px) {
+            .has-dropdown { position: static; display: block; }
+            .dropdown-menu {
+                position: static;
+                box-shadow: none;
+                border: none;
+                border-left: 2px solid #C9A463;
+                border-radius: 0;
+                background: rgba(201,164,99,0.05);
+                padding: 0;
+                min-width: unset;
+            }
+            .dropdown-menu li a { padding: 0.6rem 2.5rem; font-size: 0.8rem; }
+        }
+
         /* Page Hero */
         .page-hero {
             background: linear-gradient(135deg, #FAF3EB 0%, #E9D3C2 100%);
@@ -569,7 +622,13 @@
                 <span></span><span></span><span></span>
             </button>
             <nav id="main-nav">
-                <a href="index.html#services">Services</a>
+                <div class="has-dropdown">
+                    <a href="index.html#services">Services <span class="dropdown-arrow">▾</span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="fillers.html">Dermal Fillers</a></li>
+                        <li><a href="botox.html">Anti-Wrinkle Treatments</a></li>
+                    </ul>
+                </div>
                 <a href="index.html#about">About</a>
                 <a href="index.html#contact">Contact</a>
             </nav>
