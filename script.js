@@ -117,6 +117,8 @@ if (hamburger && navMenu) {
 // Smooth scrolling for anchor links
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
+        // Skip dropdown toggle links
+        if (this.closest('.has-dropdown') && !this.closest('.dropdown-menu')) return;
         const targetId = this.getAttribute('href');
         if (targetId === '#') {
             e.preventDefault();
