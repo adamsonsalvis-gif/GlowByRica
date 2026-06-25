@@ -70,6 +70,10 @@
 
         .mobile-logo { display: none; }
 
+        .header-book-btn {
+            display: none;
+        }
+
         /* Hamburger */
         .hamburger {
             display: none;
@@ -891,7 +895,25 @@
             }
 
             .mobile-logo { display: none !important; }
-            .header-container { justify-content: flex-end; }
+
+            .header-container { justify-content: space-between; }
+
+            .header-book-btn {
+                display: inline-block;
+                background: #C9A463;
+                color: #3A0D0D;
+                padding: 0.45rem 0.9rem;
+                border-radius: 50px;
+                font-family: "Cinzel", serif;
+                font-size: 0.6rem;
+                font-weight: 600;
+                letter-spacing: 0.06em;
+                text-decoration: none;
+                white-space: nowrap;
+                transition: all 0.3s ease;
+            }
+
+            .hero-center { display: none; }
 
             .hero-center {
                 position: static;
@@ -945,9 +967,7 @@
     <!-- Header -->
     <header>
         <div class="header-container">
-            <a href="#" class="mobile-logo">
-                <img src="images/GLOW.png" alt="Glow By Rica" style="height:55px;width:auto;border-radius:8px;">
-            </a>
+            <a href="#contact" class="header-book-btn">Book a Free Consultation</a>
             <button class="hamburger" id="hamburger" aria-label="Open menu">
                 <span></span><span></span><span></span>
             </button>
