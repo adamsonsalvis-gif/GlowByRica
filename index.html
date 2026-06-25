@@ -68,6 +68,8 @@
             color: #C9A463;
         }
 
+        .mobile-logo { display: none; }
+
         /* Hamburger */
         .hamburger {
             display: none;
@@ -847,13 +849,16 @@
             .hero-actions { justify-content: center; }
 
             .hero-logo {
-                width: 250px !important;
-                margin-left: auto !important;
-                margin-right: auto !important;
-                margin-bottom: 1rem !important;
-                display: block;
-                border-radius: 12px;
-                box-shadow: 0 4px 20px rgba(58,13,13,0.15);
+                display: none !important;
+            }
+
+            .mobile-logo {
+                display: flex !important;
+                align-items: center;
+            }
+
+            .header-container {
+                justify-content: space-between;
             }
 
             .hero-center {
@@ -908,6 +913,9 @@
     <!-- Header -->
     <header>
         <div class="header-container">
+            <a href="#" class="mobile-logo">
+                <img src="images/GLOW.png" alt="Glow By Rica" style="height:50px;width:auto;mix-blend-mode:multiply;">
+            </a>
             <button class="hamburger" id="hamburger" aria-label="Open menu">
                 <span></span><span></span><span></span>
             </button>
