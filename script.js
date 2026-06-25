@@ -114,6 +114,15 @@ if (hamburger && navMenu) {
     });
 }
 
+// Book a Consultation buttons — scroll without hash
+document.querySelectorAll('[data-scroll]').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = document.getElementById(this.dataset.scroll);
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+});
+
 // Smooth scrolling for anchor links
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
