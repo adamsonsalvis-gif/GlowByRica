@@ -65,13 +65,15 @@ if (heroLogo) {
         setTimeout(() => sparkle.remove(), 800);
     }
 
-    heroLogo.addEventListener('mouseenter', () => {
-        sparkleInterval = setInterval(createLogoSparkle, 80);
-    });
+    if (window.matchMedia('(hover: hover)').matches) {
+        heroLogo.addEventListener('mouseenter', () => {
+            sparkleInterval = setInterval(createLogoSparkle, 80);
+        });
 
-    heroLogo.addEventListener('mouseleave', () => {
-        clearInterval(sparkleInterval);
-    });
+        heroLogo.addEventListener('mouseleave', () => {
+            clearInterval(sparkleInterval);
+        });
+    }
 }
 
 // Hamburger menu toggle
