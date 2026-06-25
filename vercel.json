@@ -2,5 +2,9 @@
   "rewrites": [
     { "source": "/anti-wrinkle", "destination": "/botox.html" },
     { "source": "/dermal-fillers", "destination": "/fillers.html" }
+  ],
+  "redirects": [
+    { "source": "/botox.html", "destination": "/anti-wrinkle", "permanent": true },
+    { "source": "/fillers.html", "destination": "/dermal-fillers", "permanent": true }
   ]
 }
