@@ -610,9 +610,21 @@
 
         @media (max-width: 768px) {
             .hamburger { display: flex; }
-            nav a { margin-left: 0; padding: 0.75rem 1.5rem; display: none; }
+            nav {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background-color: #3A0D0D;
+                flex-direction: column;
+                padding: 1rem 0;
+                box-shadow: 0 4px 12px rgba(58,13,13,0.3);
+                z-index: 99;
+            }
+            nav.mobile-open { display: flex; }
+            nav a { margin-left: 0; padding: 0.75rem 2rem; display: block; }
             nav .has-dropdown { display: none !important; }
-            nav.mobile-open a { display: block; }
             nav.mobile-open .has-dropdown { display: block !important; }
             .header-container { justify-content: space-between; }
             .hamburger { margin-left: auto; }
