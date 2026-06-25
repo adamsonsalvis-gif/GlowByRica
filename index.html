@@ -68,6 +68,67 @@
             color: #C9A463;
         }
 
+        /* Services dropdown */
+        .has-dropdown {
+            position: relative;
+        }
+
+        .has-dropdown > a {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .dropdown-arrow {
+            font-size: 0.7rem;
+            transition: transform 0.3s ease;
+        }
+
+        .has-dropdown.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 0.75rem);
+            right: 0;
+            background: #3A0D0D;
+            border: 1px solid rgba(201,164,99,0.4);
+            border-radius: 10px;
+            min-width: 220px;
+            padding: 0.5rem 0;
+            box-shadow: 0 8px 24px rgba(58,13,13,0.35);
+            z-index: 200;
+            list-style: none;
+        }
+
+        .dropdown-menu li a {
+            display: block;
+            padding: 0.75rem 1.25rem;
+            color: #E6DCCB;
+            font-size: 0.82rem;
+            white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: color 0.2s, background 0.2s;
+        }
+
+        .dropdown-menu li a:hover {
+            color: #C9A463;
+            background: rgba(201,164,99,0.08);
+        }
+
+        @media (hover: hover) {
+            .has-dropdown:hover .dropdown-menu {
+                display: block;
+            }
+        }
+
+        .has-dropdown.open .dropdown-menu {
+            display: block;
+        }
+
         .mobile-logo { display: none; }
 
         .header-book-btn {
@@ -975,7 +1036,13 @@
             </button>
             <nav>
                 <ul id="nav-menu">
-                    <li><a href="#services">Services</a></li>
+                    <li class="has-dropdown">
+                        <a href="#services">Services <span class="dropdown-arrow">▾</span></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="fillers.html">Dermal Fillers</a></li>
+                            <li><a href="botox.html">Anti-Wrinkle Treatments</a></li>
+                        </ul>
+                    </li>
                     <li><a href="#about">About</a></li>
                     <li><a href="#contact">Contact</a></li>
                 </ul>

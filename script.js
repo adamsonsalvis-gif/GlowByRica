@@ -76,6 +76,24 @@ if (heroLogo) {
     }
 }
 
+// Services dropdown toggle
+const servicesDropdown = document.querySelector('.has-dropdown');
+if (servicesDropdown) {
+    servicesDropdown.querySelector('a').addEventListener('click', function(e) {
+        if (window.innerWidth <= 900 || !window.matchMedia('(hover: hover)').matches) {
+            e.preventDefault();
+            servicesDropdown.classList.toggle('open');
+        }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!servicesDropdown.contains(e.target)) {
+            servicesDropdown.classList.remove('open');
+        }
+    });
+}
+
 // Hamburger menu toggle
 const hamburger = document.getElementById('hamburger');
 const navMenu = document.getElementById('nav-menu');
