@@ -80,10 +80,8 @@ if (heroLogo) {
 const servicesDropdown = document.querySelector('.has-dropdown');
 if (servicesDropdown) {
     servicesDropdown.querySelector('a').addEventListener('click', function(e) {
-        if (window.innerWidth <= 900 || !window.matchMedia('(hover: hover)').matches) {
-            e.preventDefault();
-            servicesDropdown.classList.toggle('open');
-        }
+        e.preventDefault();
+        servicesDropdown.classList.toggle('open');
     });
 
     // Close dropdown when clicking outside
