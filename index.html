@@ -839,6 +839,7 @@
             .hero {
                 margin-top: 0;
                 padding-top: 2rem;
+                position: relative;
             }
 
             .hero-inner {
@@ -849,14 +850,14 @@
             .hero-actions { justify-content: center; }
 
             .hero-content {
-                position: relative;
-                padding: 2rem 1rem;
+                position: static;
+                padding: 2rem 1rem 5rem;
                 text-align: center;
             }
 
             .hero-logo {
                 position: absolute !important;
-                bottom: -3rem !important;
+                bottom: 0 !important;
                 top: auto !important;
                 left: 50% !important;
                 transform: translateX(-50%) !important;
@@ -865,14 +866,14 @@
                 margin: 0 !important;
                 opacity: 1;
                 mix-blend-mode: multiply;
-                z-index: 0;
+                z-index: 1;
                 display: block !important;
             }
 
             .hero-content h2,
             .hero-content p {
                 position: relative;
-                z-index: 1;
+                z-index: 2;
             }
 
             .hero-content h2 {
