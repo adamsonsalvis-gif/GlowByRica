@@ -834,21 +834,39 @@
         /* Responsive */
         @media (max-width: 900px) {
             .hero-inner {
-                flex-direction: column-reverse;
+                flex-direction: column;
                 text-align: center;
             }
 
             .hero-actions { justify-content: center; }
-            .hero-image img { max-height: 300px; }
+
+            .hero-logo {
+                margin-left: 0;
+                width: 260px;
+                margin-bottom: 1rem;
+            }
+
+            .hero-center {
+                position: static;
+                transform: none;
+                margin: 1rem auto;
+                text-align: center;
+            }
 
             .about-inner { flex-direction: column; text-align: center; }
             .about-text .section-title { text-align: center; }
             .about-text .section-divider { margin: 0 auto 1.5rem; }
             .about-badges { justify-content: center; }
 
+            .about-photo { align-self: center; }
+            .about-photo img { height: 300px; }
+
             .contact-grid { grid-template-columns: 1fr; gap: 2rem; text-align: center; }
+            .contact-left { flex-direction: column; }
             .contact-item { justify-content: center; }
             .contact-actions { align-items: center; }
+            .contact-info-block { margin-left: 0; }
+            .contact-form-block { margin-left: 0; margin-right: 0; }
         }
 
         @media (max-width: 768px) {
@@ -870,8 +888,9 @@
             nav ul.open { display: flex; }
             nav ul li a { display: block; padding: 0.75rem 2rem; }
 
-        .hero-content h1 { font-size: 2.4rem; }
+            .hero-content h2 { font-size: 1.8rem; }
             .section-title { font-size: 2rem; }
+            .hero-logo { width: 220px; }
         }
     </style>
 </head>
