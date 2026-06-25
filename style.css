@@ -1,0 +1,295 @@
+/* Private Facial Aesthetics Clinic Styles */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
+
+:root {
+  --bg: #f8f4ef;
+  --surface: #ffffff;
+  --surface-soft: #fbf7f1;
+  --text: #202124;
+  --muted: #6f6b62;
+  --accent: #b07f56;
+  --accent-dark: #8f6647;
+  --border: rgba(32, 33, 36, 0.12);
+  --shadow: 0 18px 40px rgba(32, 33, 36, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Playfair Display', serif;
+    background:
+    var(--bg);
+  color: var(--text);
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: var(--accent-dark);
+  text-decoration: none;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.container {
+  width: min(1120px, calc(100% - 2rem));
+  margin: 0 auto;
+}
+
+header {
+  padding: 1.5rem 0;
+}
+
+.brand {
+  font-family: 'Great Vibes', cursive;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: #8b5a5a;
+  font-size: 2rem;
+}
+
+nav {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+nav a {
+  color: var(--muted);
+  transition: color 0.25s ease;
+}
+
+nav a:hover {
+  color: var(--accent-dark);
+}
+
+.hero {
+  padding: 4.5rem 0 3rem;
+}
+
+.hero-grid {
+  display: grid;
+  gap: 2rem;
+  align-items: center;
+  grid-template-columns: 1.2fr 0.8fr;
+}
+
+.hero-copy h1 {
+  margin: 0;
+  font-size: clamp(2.5rem, 4vw, 4.5rem);
+  line-height: 1.02;
+}
+
+.hero-copy p {
+  margin: 1.5rem 0 2rem;
+  max-width: 42rem;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.button-primary,
+.button-secondary {
+  border: none;
+  padding: 0.95rem 1.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.button-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 14px 30px rgba(176, 127, 86, 0.2);
+}
+
+.button-secondary {
+  background: var(--surface);
+  color: var(--accent-dark);
+  border: 1px solid var(--border);
+}
+
+.button-primary:hover,
+.button-secondary:hover {
+  transform: translateY(-2px);
+}
+
+.hero-visual {
+  display: grid;
+  place-items: center;
+}
+
+.hero-visual .card {
+  width: 100%;
+  background: var(--surface);
+  border-radius: 28px;
+  padding: 2rem;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.services,
+.about,
+.contact {
+  padding: 3rem 0;
+}
+
+.section-heading {
+  margin: 0 0 1.5rem;
+  font-size: clamp(1.75rem, 2.5vw, 2.5rem);
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 700;
+}
+
+.section-subtitle {
+  max-width: 38rem;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.service-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.service-card,
+.about-card,
+.contact-card {
+  background: var(--surface);
+  border-radius: 22px;
+  padding: 1.75rem;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(32, 33, 36, 0.06);
+}
+
+.service-card h3,
+.about-card h3 {
+  margin-top: 0;
+}
+
+.service-card p,
+.about-card p {
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.about-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 1fr 1fr;
+}
+
+.about-copy {
+  display: grid;
+  gap: 1rem;
+}
+
+.about-highlight {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  background: rgba(176, 127, 86, 0.08);
+  color: var(--accent-dark);
+  font-weight: 600;
+}
+
+.contact-card {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.contact-card input,
+.contact-card textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  padding: 1rem 1.1rem;
+  color: var(--text);
+}
+
+.contact-card textarea {
+  min-height: 180px;
+  resize: vertical;
+}
+
+.contact-card label {
+  display: block;
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+  color: var(--muted);
+}
+
+.contact-card .form-row {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr 1fr;
+}
+
+.contact-card .form-row.full-width {
+  grid-template-columns: 1fr;
+}
+
+.footer {
+  padding: 2rem 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 900px) {
+  .hero-grid,
+  .about-grid {
+    grid-template-columns: 1fr;
+  }
+
+  nav {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero {
+    padding-top: 3rem;
+  }
+
+  .hero-copy h1 {
+    font-size: 2.5rem;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .contact-card .form-row {
+    grid-template-columns: 1fr;
+  }
+}

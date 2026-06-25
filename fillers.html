@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dermal Fillers - Glow By Rica</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Raleway:wght@400;600;700&family=Quicksand:wght@400;500;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background-color: #FAF3EB;
+            color: #3A0D0D;
+            line-height: 1.6;
+        }
+
+        h1, h2, h3, h4 { font-family: 'Raleway', sans-serif; }
+        header, footer { font-family: 'Montserrat', sans-serif; }
+
+        header {
+            background-color: #3A0D0D;
+            color: #fff;
+            padding: 0.5rem 0;
+            position: sticky;
+            top: 0;
+            box-shadow: 0 2px 12px rgba(58,13,13,0.3);
+            z-index: 100;
+        }
+
+        .header-container {
+            width: 100%;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 4px;
+        }
+
+        .hamburger span {
+            display: block;
+            width: 26px;
+            height: 2px;
+            background: #E6DCCB;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+        nav a {
+            color: #E6DCCB;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            transition: color 0.3s ease;
+            margin-left: 2rem;
+        }
+
+        nav a:hover { color: #C9A463; }
+
+        /* Page Hero */
+        .page-hero {
+            background: linear-gradient(135deg, #FAF3EB 0%, #E9D3C2 100%);
+            padding: 3rem 2rem;
+            border-bottom: 3px solid #C9A463;
+            text-align: center;
+            position: relative;
+        }
+
+        .page-hero-left {
+            position: absolute;
+            left: 2rem;
+            top: 2.5rem;
+            text-align: left;
+        }
+
+        .page-hero-right-logo {
+            position: absolute;
+            right: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .page-hero-right-logo a img {
+            transition: transform 0.4s ease, filter 0.4s ease;
+        }
+
+        .page-hero-right-logo a:hover img {
+            transform: scale(1.06);
+            filter: drop-shadow(0 0 12px rgba(201,164,99,0.7)) brightness(1.1);
+        }
+
+        .back-link {
+            color: #6B1D1D;
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: block;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            transition: color 0.3s;
+            text-align: left;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .back-link:hover { color: #3A0D0D; }
+
+        .page-hero h1 {
+            font-family: "Cinzel", serif;
+            font-size: clamp(2rem, 5vw, 3rem);
+            color: #3A0D0D;
+            margin-bottom: 0.75rem;
+        }
+
+        .page-hero p {
+            color: #6B1D1D;
+            font-size: 1rem;
+            max-width: 550px;
+            margin: 0 auto;
+            font-style: italic;
+            font-family: 'Raleway', sans-serif;
+        }
+
+        /* Stats bar */
+        .stats-bar {
+            background: #fff;
+            border-bottom: 1px solid #E9D3C2;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 10px rgba(58,13,13,0.05);
+        }
+
+        .stats-inner {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            text-align: center;
+        }
+
+        .stat-item h3 {
+            font-family: "Cinzel", serif;
+            font-size: 1.6rem;
+            color: #C9A463;
+            margin-bottom: 0.2rem;
+        }
+
+        .stat-item p {
+            font-size: 0.8rem;
+            color: #6B1D1D;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; padding: 2.5rem 2rem; }
+
+        /* Section header */
+        .section-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .section-header h2 {
+            font-family: "Cinzel", serif;
+            font-size: 1.8rem;
+            color: #3A0D0D;
+            margin-bottom: 0.4rem;
+        }
+
+        .gold-line {
+            width: 60px;
+            height: 2px;
+            background: #C9A463;
+            margin: 0.5rem auto 0;
+        }
+
+        /* Overview */
+        .overview-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 2.5rem;
+            margin-bottom: 2.5rem;
+            box-shadow: 0 4px 20px rgba(58,13,13,0.07);
+            border-top: 4px solid #C9A463;
+        }
+
+        .overview-card h2 {
+            font-family: "Cinzel", serif;
+            color: #3A0D0D;
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .overview-card p {
+            color: #5a2020;
+            line-height: 1.9;
+            font-size: 0.95rem;
+            text-align: justify;
+        }
+
+        /* Carousel */
+        .carousel-section { margin-bottom: 2.5rem; }
+
+        .carousel-wrapper {
+            position: relative;
+            height: 280px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .carousel-viewport {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .carousel-track {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .area-card {
+            position: absolute;
+            top: 50%;
+            left: 31%;
+            width: 38%;
+            min-height: 180px;
+            background: #fff;
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            color: #3A0D0D;
+            transition: left 0.5s cubic-bezier(0.4,0,0.2,1),
+                        transform 0.5s cubic-bezier(0.4,0,0.2,1),
+                        opacity 0.5s ease,
+                        box-shadow 0.5s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-50%) scale(0.8);
+            border-top: 4px solid #C9A463;
+            box-shadow: 0 4px 20px rgba(58,13,13,0.07);
+        }
+
+        .area-card.side-left {
+            left: 2%;
+            transform: translateY(-50%) scale(0.85);
+            opacity: 0.4;
+            z-index: 1;
+            pointer-events: auto;
+        }
+
+        .area-card.center {
+            left: 31%;
+            transform: translateY(-50%) scale(1.05);
+            opacity: 1;
+            z-index: 3;
+            box-shadow: 0 16px 45px rgba(58,13,13,0.15);
+            pointer-events: auto;
+        }
+
+        .area-card.center::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #C9A463, #e8c97e, #C9A463);
+        }
+
+        .area-card.side-right {
+            left: 60%;
+            transform: translateY(-50%) scale(0.85);
+            opacity: 0.4;
+            z-index: 1;
+            pointer-events: auto;
+        }
+
+        .area-card h4 {
+            font-family: "Cinzel", serif;
+            color: #6B1D1D;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .area-card p {
+            color: #7a5a5a;
+            font-size: 0.88rem;
+            line-height: 1.6;
+        }
+
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            background: rgba(58,13,13,0.08);
+            color: #6B1D1D;
+            border: 1px solid rgba(107,29,29,0.2);
+            border-radius: 50%;
+            width: 42px;
+            height: 42px;
+            font-size: 1rem;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #fillPrevBtn { left: 5%; transform: translateY(-50%); }
+        #fillNextBtn { left: 95%; transform: translateX(-100%) translateY(-50%); }
+
+        .carousel-btn:hover {
+            background: #C9A463;
+            color: #fff;
+            border-color: #C9A463;
+        }
+
+        .carousel-dots {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1.25rem;
+            margin-bottom: 0;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #E9D3C2;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .dot.active {
+            background: #C9A463;
+            width: 24px;
+            border-radius: 4px;
+        }
+
+        /* Pricing */
+        .pricing-section {
+            background: #fff;
+            border-radius: 16px;
+            padding: 2.5rem;
+            margin-bottom: 2.5rem;
+            box-shadow: 0 4px 20px rgba(58,13,13,0.07);
+            border-top: 4px solid #C9A463;
+        }
+
+        .pricing-section h2 {
+            font-family: "Cinzel", serif;
+            color: #3A0D0D;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .price-card {
+            border: 2px solid #E9D3C2;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: #FAF3EB;
+        }
+
+        .price-card:hover {
+            border-color: #C9A463;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(58,13,13,0.1);
+        }
+
+        .price-card h4 { font-family: "Cinzel", serif; color: #3A0D0D; font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .price-card .price { font-size: 2rem; font-weight: 700; color: #C9A463; font-family: 'Cinzel', serif; }
+        .price-card .price-note { font-size: 0.78rem; color: #999; margin-top: 0.25rem; }
+        .pricing-note { text-align: center; color: #999; font-size: 0.82rem; font-style: italic; }
+
+        /* Info grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .info-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(58,13,13,0.07);
+            border-left: 4px solid #C9A463;
+        }
+
+        .info-card h2 {
+            font-family: "Cinzel", serif;
+            color: #6B1D1D;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #E9D3C2;
+        }
+
+        .info-card p, .info-card ul {
+            color: #5a2020;
+            font-size: 0.9rem;
+            line-height: 1.9;
+        }
+
+        .info-card ul { margin-left: 1.25rem; }
+
+        /* Book CTA */
+        .book-cta {
+            background: #E9D3C2;
+            border-radius: 16px;
+            padding: 2.5rem;
+            text-align: center;
+            border: 2px solid #C9A463;
+        }
+
+        .book-cta h2 {
+            font-family: "Cinzel", serif;
+            color: #3A0D0D;
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .book-cta p {
+            color: #6B1D1D;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+            font-style: italic;
+        }
+
+        .cta-button {
+            background-color: #6B1D1D;
+            color: #FAF3EB;
+            padding: 1rem 3rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            font-family: "Cinzel", serif;
+        }
+
+        .cta-button:hover {
+            background-color: #3A0D0D;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(58,13,13,0.25);
+        }
+
+        .scroll-top {
+            position: fixed;
+            top: 90px;
+            left: 1.5rem;
+            width: 44px;
+            height: 44px;
+            background-color: #6B1D1D;
+            color: #FAF3EB;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease, transform 0.3s ease, background-color 0.3s ease;
+            z-index: 999;
+            box-shadow: 0 4px 12px rgba(58,13,13,0.3);
+        }
+
+        .scroll-top.visible { visibility: visible; }
+        .scroll-top:hover { opacity: 1 !important; background-color: #3A0D0D; transform: translateY(-3px); }
+
+        footer {
+            background-color: #2a0808;
+            color: #E6DCCB;
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .hamburger { display: flex; }
+            nav a { margin-left: 0; padding: 0.75rem 1.5rem; display: none; }
+            nav.mobile-open a { display: block; }
+            .info-grid { grid-template-columns: 1fr; }
+            .stats-inner { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <button class="hamburger" id="hamburger" aria-label="Open menu">
+                <span></span><span></span><span></span>
+            </button>
+            <nav id="main-nav">
+                <a href="index.html#services">Services</a>
+                <a href="index.html#about">About</a>
+                <a href="index.html#contact">Contact</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-hero">
+        <div class="page-hero-left">
+            <a href="index.html" class="back-link" style="margin-bottom:0.75rem;padding-left:3rem;">← Back to Home</a>
+        </div>
+        <div class="page-hero-right-logo">
+            <a href="index.html"><img src="images/GLOW.png" alt="Glow By Rica" style="width:220px;height:auto;display:block;"></a>
+        </div>
+        <h1>Dermal Fillers</h1>
+        <p>Restore volume, smooth fine lines and enhance your natural contours.</p>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stats-inner">
+            <div class="stat-item"><h3>30–45</h3><p>minute treatment</p></div>
+            <div class="stat-item"><h3>immediate</h3><p>visible results</p></div>
+            <div class="stat-item"><h3>6–18</h3><p>months lasting</p></div>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <div class="overview-card">
+            <h2>Overview</h2>
+            <p>Our premium dermal filler treatments restore volume, smooth fine lines, and enhance your natural features. Using MHRA-approved hyaluronic acid fillers, we deliver subtle, natural-looking results that bring out your best - never overdone. Every treatment begins with a thorough consultation to ensure the approach is fully tailored to your facial structure and goals.</p>
+        </div>
+
+        <div class="section-header">
+            <h2>What Can Be Treated</h2>
+            <div class="gold-line"></div>
+        </div>
+        <div class="carousel-section">
+            <div class="carousel-wrapper">
+                <button class="carousel-btn" id="fillPrevBtn"><i class="fas fa-chevron-left"></i></button>
+                <div class="carousel-viewport">
+                    <div class="carousel-track" id="fillersTrack">
+                        <div class="area-card"><h4>Lips</h4><p>Fuller shape, improved definition and natural volume.</p></div>
+                        <div class="area-card"><h4>Cheeks</h4><p>Restored volume and a subtle lifted appearance.</p></div>
+                        <div class="area-card"><h4>Nasolabial Folds</h4><p>Smoothed smile lines for a more refreshed look.</p></div>
+                        <div class="area-card"><h4>Marionette Lines</h4><p>Softens the lines that run from the corners of the mouth down to the chin for a more lifted appearance.</p></div>
+                        <div class="area-card"><h4>Chin</h4><p>Improved definition and facial balance.</p></div>
+                        <div class="area-card"><h4>Jawline</h4><p>Enhanced structure and a more sculpted profile.</p></div>
+                    </div>
+                </div>
+                <button class="carousel-btn" id="fillNextBtn"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <div class="carousel-dots" id="fillersDots"></div>
+        </div>
+
+        <div class="pricing-section">
+            <h2>Pricing</h2>
+            <div class="pricing-grid">
+                <div class="price-card"><h4>Lip Fillers</h4><div class="price">£XX</div><div class="price-note">0.5 – 1 ml</div></div>
+                <div class="price-card"><h4>Cheek Fillers</h4><div class="price">£XX</div><div class="price-note">per ml</div></div>
+                <div class="price-card"><h4>Nasolabial Folds</h4><div class="price">£XX</div><div class="price-note">per area</div></div>
+                <div class="price-card"><h4>Under Eyes</h4><div class="price">£XX</div><div class="price-note">tear trough</div></div>
+            </div>
+            <p class="pricing-note">Prices confirmed at consultation based on product amount needed.</p>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-card">
+                <h2>Treatment Process</h2>
+                <p>A thorough consultation is followed by the treatment itself, which takes 30–45 minutes. A topical numbing cream is applied beforehand so discomfort is minimal. Most clients return to normal activities the same day.</p>
+            </div>
+            <div class="info-card">
+                <h2>Results & Longevity</h2>
+                <ul>
+                    <li>Results visible immediately</li>
+                    <li>Improve further over 2 weeks</li>
+                    <li>Lasts 6–18 months</li>
+                    <li>Fully reversible if needed</li>
+                </ul>
+            </div>
+            <div class="info-card">
+                <h2>Aftercare</h2>
+                <p>Avoid strenuous exercise, alcohol and direct sun exposure for 24 hours. Mild swelling or bruising may occur and typically resolves within a few days. Full aftercare instructions provided at your appointment.</p>
+            </div>
+        </div>
+
+        <div class="book-cta">
+            <h2>Ready to Book?</h2>
+            <p>Free consultations available — no commitment required.</p>
+            <a href="index.html#contact" class="cta-button">Book a Consultation</a>
+        </div>
+
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Glow By Rica. All rights reserved.</p>
+    </footer>
+
+    <button class="scroll-top" id="scrollTop" aria-label="Back to top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <script src="script.js"></script>
+    <script>
+    (function() {
+        // Fillers carousel
+        const track = document.getElementById('fillersTrack');
+        const cards = Array.from(track.querySelectorAll('.area-card'));
+        const dotsContainer = document.getElementById('fillersDots');
+        let current = 0;
+        const total = cards.length;
+
+        cards.forEach((_, i) => {
+            const dot = document.createElement('button');
+            dot.classList.add('dot');
+            dot.addEventListener('click', () => goTo(i));
+            dotsContainer.appendChild(dot);
+        });
+
+        function goTo(index) {
+            current = (index + total) % total;
+            render();
+        }
+
+        function render() {
+            const prev = (current - 1 + total) % total;
+            const next = (current + 1) % total;
+            cards.forEach(card => card.classList.remove('center', 'side-left', 'side-right'));
+            cards[prev].classList.add('side-left');
+            cards[current].classList.add('center');
+            cards[next].classList.add('side-right');
+            document.querySelectorAll('#fillersDots .dot').forEach((dot, i) => dot.classList.toggle('active', i === current));
+        }
+
+        document.getElementById('fillPrevBtn').addEventListener('click', () => { goTo(current - 1); resetTimer(); });
+        document.getElementById('fillNextBtn').addEventListener('click', () => { goTo(current + 1); resetTimer(); });
+        render();
+
+        let autoTimer = setInterval(() => goTo(current + 1), 7000);
+        function resetTimer() {
+            clearInterval(autoTimer);
+            autoTimer = setInterval(() => goTo(current + 1), 7000);
+        }
+
+        const ham = document.getElementById('hamburger');
+        const nav = document.getElementById('main-nav');
+        if (ham && nav) {
+            ham.addEventListener('click', () => {
+                ham.classList.toggle('open');
+                nav.classList.toggle('mobile-open');
+            });
+        }
+
+        document.querySelectorAll('.book-cta a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const url = this.getAttribute('href');
+                document.body.style.transition = 'opacity 0.4s ease';
+                document.body.style.opacity = '0';
+                setTimeout(() => { window.location.href = url; }, 400);
+            });
+        });
+    })();
+    </script>
+</body>
+</html>
