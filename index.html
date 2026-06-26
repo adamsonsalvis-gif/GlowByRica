@@ -391,6 +391,22 @@
             border-top: 4px solid #C9A463;
         }
 
+        .frosted-panel {
+            background: rgba(255,255,255,0.3);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 0.5rem;
+            transition: background 0.4s ease, backdrop-filter 0.4s ease;
+        }
+
+        .service-card:hover .frosted-panel {
+            background: rgba(255,255,255,0.82);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
         .service-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 30px rgba(58,13,13,0.12);
@@ -1134,7 +1150,7 @@
         <div class="section-divider"></div>
         <div class="services-grid">
             <div class="service-card" style="background-image: url('images/filler.png'); background-size: cover; background-position: center; background-repeat: no-repeat; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;">
-                <div style="position: relative; z-index: 1; background: rgba(255,255,255,0.75); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-radius: 10px; padding: 1rem; margin: 0.5rem;">
+                <div class="frosted-panel" style="position: relative; z-index: 1;">
                     <h3>Dermal Fillers</h3>
                     <p style="font-size:0.85rem; margin: 0.5rem 0;">Restore volume and smooth out fine lines with our premium dermal filler treatments.</p>
                     <a href="dermal-fillers" class="service-button">Learn More</a>
