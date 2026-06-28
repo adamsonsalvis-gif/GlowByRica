@@ -1346,12 +1346,12 @@
                     <h3>Send a Message</h3>
                     <p style="color:#E6DCCB; font-size:0.88rem; margin-bottom:1rem;">Leave a message and we'll get back to you as soon as possible.</p>
                     <form class="contact-form" id="contactForm" action="https://formspree.io/f/mnjkqryo" method="POST">
-                        <input type="text" name="name" placeholder="Your Name" required>
-                        <input type="email" name="email" placeholder="Your Email" required>
-                        <input type="tel" name="phone" placeholder="Your Phone Number" required>
+                        <input type="text" name="name" placeholder="Your Name *" required>
+                        <input type="email" name="email" placeholder="Your Email *" required>
+                        <input type="tel" name="phone" placeholder="Your Phone Number *" required>
                         <div class="custom-select-wrapper">
                             <div class="custom-select" data-name="treatment">
-                                <div class="custom-select-trigger">Select Your Treatment</div>
+                                <div class="custom-select-trigger">Select Your Treatment *</div>
                                 <ul class="custom-select-options">
                                     <li data-value="Dermal Fillers">Dermal Fillers</li>
                                     <li data-value="Anti-Wrinkle Treatments">Anti-Wrinkle Treatments</li>
@@ -1361,7 +1361,7 @@
                         </div>
                         <div class="custom-select-wrapper">
                             <div class="custom-select" data-name="preferred_time">
-                                <div class="custom-select-trigger">Preferred Time</div>
+                                <div class="custom-select-trigger">Preferred Time *</div>
                                 <ul class="custom-select-options">
                                     <li data-value="Morning">Morning</li>
                                     <li data-value="Afternoon">Afternoon</li>
@@ -1370,7 +1370,7 @@
                             </div>
                             <input type="hidden" name="preferred_time" required>
                         </div>
-                        <textarea name="message" placeholder="Your message..." required></textarea>
+                        <textarea name="message" placeholder="Your message... *" required></textarea>
                         <button type="submit" class="contact-form-btn">Send Message</button>
                     </form>
                 </div>
