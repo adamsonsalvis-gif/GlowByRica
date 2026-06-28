@@ -123,6 +123,32 @@ window.addEventListener('load', () => {
     }
 });
 
+// Custom select dropdowns
+document.querySelectorAll('.custom-select').forEach(select => {
+    const trigger = select.querySelector('.custom-select-trigger');
+    const options = select.querySelectorAll('.custom-select-options li');
+    const hiddenInput = select.parentElement.querySelector('input[type="hidden"]');
+
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.custom-select.open').forEach(s => { if (s !== select) s.classList.remove('open'); });
+        select.classList.toggle('open');
+    });
+
+    options.forEach(option => {
+        option.addEventListener('click', () => {
+            trigger.textContent = option.dataset.value;
+            hiddenInput.value = option.dataset.value;
+            select.classList.add('selected');
+            select.classList.remove('open');
+        });
+    });
+});
+
+document.addEventListener('click', () => {
+    document.querySelectorAll('.custom-select.open').forEach(s => s.classList.remove('open'));
+});
+
 // Book a Consultation buttons — scroll without hash
 document.querySelectorAll('[data-scroll]').forEach(btn => {
     btn.addEventListener('click', function(e) {
