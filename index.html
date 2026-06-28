@@ -430,6 +430,14 @@
             color: #C9A463;
         }
 
+        .service-card-photo {
+            height: 180px;
+            background-size: cover;
+            background-position: center;
+            border-radius: 12px 12px 0 0;
+            margin: -2rem -2rem 1.5rem;
+        }
+
         .service-card h3 {
             color: #6B1D1D;
             margin-bottom: 1rem;
@@ -1150,18 +1158,17 @@
         <h2 class="section-title">Our Services</h2>
         <div class="section-divider"></div>
         <div class="services-grid">
-            <div class="service-card" style="background-image: url('images/filler.png'); background-size: cover; background-position: center; background-repeat: no-repeat; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;">
-                <div class="frosted-panel" style="position: relative; z-index: 1;">
-                    <h3 style="font-size: 1.6rem;">Dermal Fillers</h3>
-                    <p style="font-size:0.85rem; margin: 0.5rem 0;">Restore volume and smooth out fine lines with our premium dermal filler treatments.</p>
-                    <a href="dermal-fillers" class="service-button">Learn More</a>
-                </div>
+            <div class="service-card" style="overflow: hidden; padding-top: 0;">
+                <div class="service-card-photo" style="background-image: url('images/filler.png');"></div>
+                <h3 style="font-size: 1.6rem;">Dermal Fillers</h3>
+                <p>Restore volume and smooth out fine lines with our premium dermal filler treatments. Achieve a natural, refreshed appearance.</p>
+                <a href="dermal-fillers" class="service-button">Learn More</a>
             </div>
-            <div class="service-card" style="background-image: url('images/wrinkles.png'); background-size: cover; background-position: center; background-repeat: no-repeat; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;">
-                <div class="frosted-panel" style="position: relative; z-index: 1;">
-                    <h3 style="font-size: 1.35rem;">Anti-Wrinkle Treatments</h3>
-                    <p style="font-size:0.85rem; margin: 0.5rem 0;">Prevent and reduce expression lines with precision Anti-Wrinkle injections. Results visible within 3-14 days.</p>
-                    <a href="anti-wrinkle" class="service-button">Learn More</a>
+            <div class="service-card" style="overflow: hidden; padding-top: 0;">
+                <div class="service-card-photo" style="background-image: url('images/wrinkles.png');"></div>
+                <h3 style="font-size: 1.35rem; white-space: nowrap;">Anti-Wrinkle Treatments</h3>
+                <p>Prevent and reduce expression lines with precision Anti-Wrinkle injections. Results visible within 3-14 days.</p>
+                <a href="anti-wrinkle" class="service-button">Learn More</a>
                 </div>
             </div>
         </div>
