@@ -717,8 +717,13 @@
 
         .contact-form input:focus,
         .contact-form select:focus,
-        .contact-form textarea:focus {
-            border-color: #C9A463;
+        .contact-form textarea:focus,
+        .contact-form input:focus-visible,
+        .contact-form select:focus-visible,
+        .contact-form textarea:focus-visible {
+            border-color: #C9A463 !important;
+            outline: none !important;
+            box-shadow: 0 0 0 2px rgba(201,164,99,0.3) !important;
         }
 
         .contact-form select {
