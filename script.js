@@ -127,6 +127,7 @@ window.addEventListener('load', () => {
 document.querySelectorAll('[data-scroll]').forEach(btn => {
     btn.addEventListener('click', function(e) {
         e.preventDefault();
+        e.stopImmediatePropagation();
         const target = document.getElementById(this.dataset.scroll);
         if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
