@@ -696,6 +696,7 @@
         }
 
         .contact-form input,
+        .contact-form select,
         .contact-form textarea {
             width: 100%;
             background: rgba(255,255,255,0.07);
@@ -715,8 +716,18 @@
         }
 
         .contact-form input:focus,
+        .contact-form select:focus,
         .contact-form textarea:focus {
             border-color: #C9A463;
+        }
+
+        .contact-form select option {
+            background: #3A0D0D;
+            color: #E6DCCB;
+        }
+
+        .contact-form select:invalid {
+            color: rgba(230,220,203,0.5);
         }
 
         .contact-form textarea {
@@ -1276,6 +1287,17 @@
                         <input type="text" name="name" placeholder="Your Name" required>
                         <input type="email" name="email" placeholder="Your Email" required>
                         <input type="tel" name="phone" placeholder="Your Phone Number" required>
+                        <select name="treatment" required>
+                            <option value="" disabled selected>Select Your Treatment</option>
+                            <option value="Dermal Fillers">Dermal Fillers</option>
+                            <option value="Anti-Wrinkle Treatments">Anti-Wrinkle Treatments</option>
+                        </select>
+                        <select name="preferred_time" required>
+                            <option value="" disabled selected>Preferred Time</option>
+                            <option value="Morning">Morning</option>
+                            <option value="Afternoon">Afternoon</option>
+                            <option value="Evening">Evening</option>
+                        </select>
                         <textarea name="message" placeholder="Your message..." required></textarea>
                         <button type="submit" class="contact-form-btn">Send Message</button>
                     </form>
