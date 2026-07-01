@@ -200,10 +200,6 @@
             filter: drop-shadow(0 0 14px rgba(201,164,99,0.75)) brightness(1.1);
         }
 
-        .hero-logo-halo {
-            display: none;
-        }
-
         .sparkle-particle {
             position: fixed;
             pointer-events: none;
@@ -1079,28 +1075,6 @@
                 display: block !important;
             }
 
-            .hero-logo-halo {
-                display: block !important;
-                position: absolute !important;
-                top: 40% !important;
-                left: 50% !important;
-                transform: translate(-50%, -50%) !important;
-                width: 85% !important;
-                max-width: 320px !important;
-                aspect-ratio: 1 / 1;
-                border-radius: 50%;
-                background: radial-gradient(circle, rgba(201,164,99,0.65) 0%, rgba(201,164,99,0) 70%);
-                filter: blur(16px);
-                z-index: 0;
-                pointer-events: none;
-                animation: hero-logo-glow-pulse 2.4s ease-in-out infinite;
-            }
-
-            @keyframes hero-logo-glow-pulse {
-                0%, 100% { opacity: 0.4; transform: translate(-50%, -50%) scale(0.88); }
-                50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
-            }
-
             .hero-content h2 {
                 position: absolute !important;
                 bottom: 3.5rem !important;
@@ -1248,7 +1222,6 @@
     <section class="hero">
         <div class="hero-inner">
             <div class="hero-content">
-                <div class="hero-logo-halo"></div>
                 <img src="images/GLOW.png" alt="Glow By Rica" class="hero-logo">
                 <h2>Enhance Your Natural Beauty</h2>
                 <p>Nurse&nbsp;led • Professional • Personal</p>
