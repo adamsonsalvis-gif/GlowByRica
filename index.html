@@ -498,6 +498,10 @@
             flex-shrink: 0;
             align-self: flex-end;
             margin-bottom: -8px;
+            width: 480px;
+            height: 550px;
+            overflow: hidden;
+            position: relative;
         }
 
         .about-photo img {
@@ -505,10 +509,13 @@
             width: auto;
             object-fit: contain;
             filter: drop-shadow(0 8px 24px rgba(58,13,13,0.15));
+            position: absolute;
+            top: 0;
+            left: -160px;
         }
 
         .about-text {
-            flex: 0 0 300px;
+            flex: 0 0 420px;
             align-self: flex-start;
             margin-top: -1rem;
         }
@@ -1082,8 +1089,8 @@
             .about-text .section-divider { margin: 0 auto 1.5rem; }
             .about-badges { justify-content: center; }
 
-            .about-photo { align-self: center; }
-            .about-photo img { height: 300px; }
+            .about-photo { align-self: center; width: 265px; height: 300px; }
+            .about-photo img { height: 300px; left: -86px; }
 
             .contact-grid { grid-template-columns: 1fr; gap: 2rem; text-align: center; }
             .contact-left { flex-direction: column; }
