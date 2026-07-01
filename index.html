@@ -1092,7 +1092,7 @@
             .about-text { flex: 1 1 auto; width: 100%; }
             .about-text .section-title { text-align: center; }
             .about-text .section-divider { margin: 0 auto 1.5rem; }
-            .about-badges { justify-content: center; clear: both; margin-top: 1rem; }
+            .about-badges { justify-content: center; clear: both; margin-top: 0.25rem; }
 
             .about-photo { display: none; }
 
@@ -1111,19 +1111,20 @@
                 display: block;
                 float: right;
                 clear: right;
-                width: 130px;
-                aspect-ratio: 842 / 1027;
+                width: 160px;
+                aspect-ratio: 802 / 1027;
                 overflow: hidden;
                 position: relative;
-                margin: 0 0 1rem 0.8rem;
+                margin: 0 0 0.5rem 0.5rem;
                 border-radius: 6px;
             }
 
+            /* Crop to the exact opaque bounds of ME4.png (x 346-1148 of 1254) */
             .about-photo-mobile img {
                 position: absolute;
                 top: 0;
-                left: -38.7%;
-                width: 148.9%;
+                left: -43.1%;
+                width: 156.4%;
                 height: 100%;
                 filter: drop-shadow(0 6px 16px rgba(58,13,13,0.15));
             }
