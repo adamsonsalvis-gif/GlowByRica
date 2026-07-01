@@ -514,6 +514,10 @@
             left: -160px;
         }
 
+        .about-photo-mobile {
+            display: none;
+        }
+
         .about-text {
             flex: 0 0 420px;
             align-self: flex-start;
@@ -1087,10 +1091,30 @@
             .about-text { flex: 1 1 auto; width: 100%; }
             .about-text .section-title { text-align: center; }
             .about-text .section-divider { margin: 0 auto 1.5rem; }
-            .about-badges { justify-content: center; }
+            .about-badges { justify-content: center; clear: both; margin-top: 1rem; }
 
-            .about-photo { align-self: center; width: 265px; height: 300px; }
-            .about-photo img { height: 300px; left: -86px; }
+            .about-photo { display: none; }
+
+            .about-photo-mobile {
+                display: block;
+                float: right;
+                width: 42%;
+                max-width: 190px;
+                aspect-ratio: 842 / 1027;
+                overflow: hidden;
+                position: relative;
+                margin: 1.6rem 0 1rem 1.2rem;
+                border-radius: 6px;
+            }
+
+            .about-photo-mobile img {
+                position: absolute;
+                top: 0;
+                left: -38.7%;
+                width: 148.9%;
+                height: 100%;
+                filter: drop-shadow(0 6px 16px rgba(58,13,13,0.15));
+            }
 
             .contact-grid { grid-template-columns: 1fr; gap: 2rem; text-align: center; }
             .contact-left { flex-direction: column; }
@@ -1208,6 +1232,7 @@
             <div class="about-text">
                 <h2 class="section-title">About Rica</h2>
                 <div class="section-divider"></div>
+                <div class="about-photo-mobile"><img src="images/ME4.png" alt="Rica"></div>
                 <p>Hi, I'm Rica - an NMC registered nurse, certified aesthetic injector passionate about helping you feel confident and beautiful in your own skin. Every treatment I offer is tailored to your unique features and goals, with a focus on natural-looking, long-lasting results.</p>
                 <p>I use only MHRA-approved products and the latest techniques to ensure your safety, comfort, and satisfaction. Whether you're exploring aesthetics for the first time or looking to refresh your routine, I'm here to guide you every step of the way.</p>
                 <div class="about-badges">
