@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=DM+Sans:wght@400;500&family=Montserrat:wght@400;500;600&family=Cinzel:wght@400;700&family=Quicksand:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Admin Portal - Glow By Rica</title>
+    <link rel="icon" type="image/jpeg" href="images/GLOW2.jpg">
+    <style>
+        /*
+          UI SKETCH ONLY — no backend wired up yet.
+          The "login" below is a placeholder screen, not real authentication.
+          Calendar / consent form data on this page is hardcoded sample data.
+        */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: "Quicksand", sans-serif;
+            background-color: #FAF3EB;
+            color: #3A0D0D;
+            line-height: 1.6;
+        }
+
+        h1, h2, h3, h4 { font-family: "Raleway", sans-serif; }
+
+        a { color: inherit; text-decoration: none; }
+
+        /* ---------- Login screen ---------- */
+        #login-screen {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #3A0D0D 0%, #6B1D1D 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .login-card {
+            background: #FAF3EB;
+            border-radius: 18px;
+            padding: 2.5rem 2rem;
+            width: 100%;
+            max-width: 360px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+        }
+
+        .login-card img { width: 90px; margin: 0 auto 1rem; }
+
+        .login-card h1 {
+            font-family: "Cinzel", serif;
+            font-size: 1.3rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .login-card p.sub {
+            font-size: 0.85rem;
+            color: #6B1D1D;
+            margin-bottom: 1.5rem;
+        }
+
+        .login-card input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border-radius: 10px;
+            border: 1px solid rgba(58,13,13,0.2);
+            font-family: "Quicksand", sans-serif;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+
+        .login-card button {
+            width: 100%;
+            padding: 0.85rem;
+            border: none;
+            border-radius: 10px;
+            background: #6B1D1D;
+            color: #FAF3EB;
+            font-family: "Cinzel", serif;
+            font-size: 0.85rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .login-card button:hover { background: #3A0D0D; }
+
+        .login-note {
+            margin-top: 1.2rem;
+            font-size: 0.72rem;
+            color: #a17b7b;
+        }
+
+        /* ---------- Admin shell ---------- */
+        #admin-shell { display: none; min-height: 100vh; }
+        #admin-shell.active { display: flex; }
+
+        .sidebar {
+            width: 230px;
+            flex-shrink: 0;
+            background: #3A0D0D;
+            color: #E6DCCB;
+            padding: 1.5rem 1rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+        }
+
+        .sidebar-brand {
+            font-family: "Cinzel", serif;
+            font-size: 1.1rem;
+            color: #C9A463;
+            text-align: center;
+            padding-bottom: 1.2rem;
+            margin-bottom: 1.2rem;
+            border-bottom: 1px solid rgba(201,164,99,0.25);
+        }
+
+        .sidebar-brand span {
+            display: block;
+            font-size: 0.65rem;
+            letter-spacing: 0.15em;
+            color: #E6DCCB;
+            text-transform: uppercase;
+            margin-top: 0.2rem;
+        }
+
+        .sidebar nav ul { list-style: none; }
+
+        .sidebar nav a {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            padding: 0.75rem 0.8rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 0.3rem;
+            transition: background 0.25s ease, color 0.25s ease;
+        }
+
+        .sidebar nav a i { width: 18px; text-align: center; color: #C9A463; }
+
+        .sidebar nav a:hover,
+        .sidebar nav a.active {
+            background: rgba(201,164,99,0.15);
+            color: #C9A463;
+        }
+
+        .sidebar nav a.disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+
+        .sidebar nav a.disabled:hover { background: none; color: #E6DCCB; }
+
+        .sidebar-logout {
+            margin-top: 1.5rem;
+            padding-top: 1.2rem;
+            border-top: 1px solid rgba(201,164,99,0.25);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem 2.5rem 4rem;
+            max-width: 1200px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .topbar h2 {
+            font-family: "Cinzel", serif;
+            font-size: 1.6rem;
+        }
+
+        .topbar .badge {
+            background: #C9A463;
+            color: #3A0D0D;
+            padding: 0.35rem 0.8rem;
+            border-radius: 50px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* ---------- Dashboard ---------- */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.2rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 1.4rem;
+            box-shadow: 0 8px 24px rgba(58,13,13,0.07);
+            border: 1px solid rgba(58,13,13,0.06);
+        }
+
+        .stat-card i {
+            font-size: 1.3rem;
+            color: #C9A463;
+            margin-bottom: 0.6rem;
+            display: block;
+        }
+
+        .stat-card .stat-number {
+            font-family: "Cinzel", serif;
+            font-size: 1.8rem;
+            color: #3A0D0D;
+        }
+
+        .stat-card .stat-label {
+            font-size: 0.8rem;
+            color: #6B1D1D;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .panel-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .panel {
+            background: #fff;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 24px rgba(58,13,13,0.07);
+            border: 1px solid rgba(58,13,13,0.06);
+        }
+
+        .panel h3 {
+            font-family: "Cinzel", serif;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .list-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.7rem 0;
+            border-bottom: 1px solid rgba(58,13,13,0.07);
+            font-size: 0.87rem;
+        }
+
+        .list-row:last-child { border-bottom: none; }
+
+        .list-row .meta { color: #6B1D1D; font-size: 0.78rem; }
+
+        .status-pill {
+            padding: 0.25rem 0.7rem;
+            border-radius: 50px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .status-signed { background: rgba(76,150,90,0.15); color: #3f7a4c; }
+        .status-pending { background: rgba(201,164,99,0.2); color: #8a6a2b; }
+        .status-expired { background: rgba(178,58,58,0.15); color: #b23a3a; }
+
+        /* ---------- Calendar ---------- */
+        .calendar-layout {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 1.5rem;
+        }
+
+        .calendar-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 24px rgba(58,13,13,0.07);
+            border: 1px solid rgba(58,13,13,0.06);
+        }
+
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+        }
+
+        .calendar-nav h3 {
+            font-family: "Cinzel", serif;
+            font-size: 1.05rem;
+        }
+
+        .calendar-nav button {
+            background: #FAF3EB;
+            border: 1px solid rgba(58,13,13,0.1);
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            color: #6B1D1D;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+
+        .calendar-grid .day-label {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #6B1D1D;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding-bottom: 0.4rem;
+        }
+
+        .calendar-cell {
+            aspect-ratio: 1 / 0.9;
+            border-radius: 10px;
+            background: #FAF3EB;
+            padding: 0.4rem;
+            font-size: 0.75rem;
+            position: relative;
+            border: 1px solid rgba(58,13,13,0.05);
+        }
+
+        .calendar-cell.empty { background: transparent; border: none; }
+        .calendar-cell.today { border: 1px solid #C9A463; background: #fff; }
+
+        .calendar-cell .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #C9A463;
+            position: absolute;
+            bottom: 6px;
+            left: 6px;
+        }
+
+        .calendar-cell.has-event {
+            background: rgba(201,164,99,0.18);
+        }
+
+        .agenda-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 24px rgba(58,13,13,0.07);
+            border: 1px solid rgba(58,13,13,0.06);
+        }
+
+        .agenda-card h3 {
+            font-family: "Cinzel", serif;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .agenda-item {
+            display: flex;
+            gap: 0.8rem;
+            padding: 0.7rem 0;
+            border-bottom: 1px solid rgba(58,13,13,0.07);
+        }
+
+        .agenda-item:last-child { border-bottom: none; }
+
+        .agenda-time {
+            font-family: "Cinzel", serif;
+            font-size: 0.78rem;
+            color: #C9A463;
+            width: 55px;
+            flex-shrink: 0;
+        }
+
+        .agenda-details .name { font-weight: 600; font-size: 0.85rem; }
+        .agenda-details .treatment { font-size: 0.78rem; color: #6B1D1D; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #6B1D1D;
+            color: #FAF3EB;
+            border: none;
+            padding: 0.65rem 1.2rem;
+            border-radius: 50px;
+            font-family: "Cinzel", serif;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .btn:hover { background: #3A0D0D; }
+
+        .btn-outline {
+            background: transparent;
+            color: #6B1D1D;
+            border: 1px solid rgba(58,13,13,0.2);
+        }
+
+        .btn-outline:hover { background: rgba(58,13,13,0.05); color: #6B1D1D; }
+
+        /* ---------- Consent forms ---------- */
+        .table-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 24px rgba(58,13,13,0.07);
+            border: 1px solid rgba(58,13,13,0.06);
+            margin-bottom: 1.8rem;
+            overflow-x: auto;
+        }
+
+        .table-card h3 {
+            font-family: "Cinzel", serif;
+            font-size: 1rem;
+            margin-bottom: 1.1rem;
+        }
+
+        table { width: 100%; border-collapse: collapse; min-width: 520px; }
+
+        th {
+            text-align: left;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6B1D1D;
+            padding-bottom: 0.6rem;
+            border-bottom: 1px solid rgba(58,13,13,0.1);
+        }
+
+        td {
+            padding: 0.8rem 0.4rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid rgba(58,13,13,0.06);
+        }
+
+        tr:last-child td { border-bottom: none; }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: #6B1D1D;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-right: 0.6rem;
+        }
+
+        .icon-btn:hover { color: #C9A463; }
+
+        .coming-soon {
+            text-align: center;
+            padding: 4rem 1rem;
+            color: #6B1D1D;
+        }
+
+        .coming-soon i { font-size: 2rem; color: #C9A463; margin-bottom: 1rem; display: block; }
+
+        /* ---------- Mobile ---------- */
+        .mobile-topbar { display: none; }
+
+        @media (max-width: 900px) {
+            #admin-shell.active { flex-direction: column; }
+
+            .sidebar {
+                position: fixed;
+                left: 0; top: 0; bottom: 0;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                z-index: 200;
+                height: 100vh;
+            }
+
+            .sidebar.open { transform: translateX(0); }
+
+            .mobile-topbar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background: #3A0D0D;
+                color: #C9A463;
+                padding: 1rem 1.2rem;
+                position: sticky;
+                top: 0;
+                z-index: 150;
+            }
+
+            .mobile-topbar button {
+                background: none;
+                border: none;
+                color: #C9A463;
+                font-size: 1.3rem;
+                cursor: pointer;
+            }
+
+            .mobile-topbar span { font-family: "Cinzel", serif; font-size: 1rem; }
+
+            .main-content { padding: 1.5rem 1.2rem 3rem; }
+
+            .panel-grid,
+            .calendar-layout { grid-template-columns: 1fr; }
+
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.4);
+                z-index: 190;
+            }
+
+            .sidebar-overlay.active { display: block; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Placeholder login gate (UI only, not real auth) -->
+    <div id="login-screen">
+        <div class="login-card">
+            <img src="images/GLOW.png" alt="Glow By Rica">
+            <h1>Admin Portal</h1>
+            <p class="sub">Sign in to manage bookings &amp; consent forms</p>
+            <input type="email" placeholder="Email" id="login-email">
+            <input type="password" placeholder="Password" id="login-password">
+            <button id="login-btn">Sign In</button>
+            <p class="login-note">Preview build — sign-in isn't connected to a real account yet.</p>
+        </div>
+    </div>
+
+    <div id="admin-shell">
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                Glow By Rica
+                <span>Admin Portal</span>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="#" class="nav-link active" data-view="dashboard"><i class="fa-solid fa-gauge"></i> Dashboard</a></li>
+                    <li><a href="#" class="nav-link" data-view="calendar"><i class="fa-solid fa-calendar-days"></i> Calendar</a></li>
+                    <li><a href="#" class="nav-link" data-view="consent"><i class="fa-solid fa-file-signature"></i> Consent Forms</a></li>
+                    <li><a href="#" class="nav-link" data-view="clients"><i class="fa-solid fa-users"></i> Clients</a></li>
+                    <li><a href="#" class="disabled"><i class="fa-solid fa-gear"></i> Settings</a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-logout">
+                <a href="#" id="logout-link"><i class="fa-solid fa-arrow-right-from-bracket"></i> Log out</a>
+            </div>
+        </aside>
+
+        <div style="flex:1; display:flex; flex-direction:column;">
+            <div class="mobile-topbar">
+                <button id="hamburger-toggle"><i class="fa-solid fa-bars"></i></button>
+                <span>Admin Portal</span>
+                <span style="width:1.3rem;"></span>
+            </div>
+
+            <main class="main-content">
+
+                <!-- Dashboard -->
+                <section class="view active" id="view-dashboard">
+                    <div class="topbar">
+                        <h2>Welcome back, Rica</h2>
+                        <span class="badge">Wed 1 Jul</span>
+                    </div>
+
+                    <div class="stat-grid">
+                        <div class="stat-card">
+                            <i class="fa-solid fa-calendar-check"></i>
+                            <div class="stat-number">5</div>
+                            <div class="stat-label">Today's Appointments</div>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fa-solid fa-file-signature"></i>
+                            <div class="stat-number">3</div>
+                            <div class="stat-label">Consent Forms Pending</div>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fa-solid fa-user-plus"></i>
+                            <div class="stat-number">2</div>
+                            <div class="stat-label">New Clients This Week</div>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fa-solid fa-sterling-sign"></i>
+                            <div class="stat-number">£640</div>
+                            <div class="stat-label">Booked Today</div>
+                        </div>
+                    </div>
+
+                    <div class="panel-grid">
+                        <div class="panel">
+                            <h3>Today's Appointments</h3>
+                            <div class="list-row">
+                                <div><strong>Emily Carter</strong><div class="meta">Anti-wrinkle · 10:00am</div></div>
+                                <span class="status-pill status-signed">Confirmed</span>
+                            </div>
+                            <div class="list-row">
+                                <div><strong>Sophie Nguyen</strong><div class="meta">Dermal Fillers · 11:30am</div></div>
+                                <span class="status-pill status-signed">Confirmed</span>
+                            </div>
+                            <div class="list-row">
+                                <div><strong>Priya Shah</strong><div class="meta">Skincare Consult · 1:15pm</div></div>
+                                <span class="status-pill status-pending">Awaiting Form</span>
+                            </div>
+                            <div class="list-row">
+                                <div><strong>Hannah Wood</strong><div class="meta">Anti-wrinkle · 3:00pm</div></div>
+                                <span class="status-pill status-signed">Confirmed</span>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <h3>Recent Consent Forms</h3>
+                            <div class="list-row">
+                                <div><strong>Priya Shah</strong><div class="meta">Skincare Consent</div></div>
+                                <span class="status-pill status-pending">Pending</span>
+                            </div>
+                            <div class="list-row">
+                                <div><strong>Emily Carter</strong><div class="meta">Anti-wrinkle Consent</div></div>
+                                <span class="status-pill status-signed">Signed</span>
+                            </div>
+                            <div class="list-row">
+                                <div><strong>Louise Adams</strong><div class="meta">Filler Consent</div></div>
+                                <span class="status-pill status-expired">Expired</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Calendar -->
+                <section class="view" id="view-calendar">
+                    <div class="topbar">
+                        <h2>Calendar</h2>
+                        <button class="btn"><i class="fa-solid fa-plus"></i> New Appointment</button>
+                    </div>
+
+                    <div class="calendar-layout">
+                        <div class="calendar-card">
+                            <div class="calendar-nav">
+                                <button><i class="fa-solid fa-chevron-left"></i></button>
+                                <h3>July 2026</h3>
+                                <button><i class="fa-solid fa-chevron-right"></i></button>
+                            </div>
+                            <div class="calendar-grid">
+                                <div class="day-label">Mon</div>
+                                <div class="day-label">Tue</div>
+                                <div class="day-label">Wed</div>
+                                <div class="day-label">Thu</div>
+                                <div class="day-label">Fri</div>
+                                <div class="day-label">Sat</div>
+                                <div class="day-label">Sun</div>
+
+                                <div class="calendar-cell empty"></div>
+                                <div class="calendar-cell empty"></div>
+                                <div class="calendar-cell">1<span class="dot"></span></div>
+                                <div class="calendar-cell has-event">2<span class="dot"></span></div>
+                                <div class="calendar-cell">3</div>
+                                <div class="calendar-cell">4</div>
+                                <div class="calendar-cell">5</div>
+
+                                <div class="calendar-cell">6</div>
+                                <div class="calendar-cell has-event">7<span class="dot"></span></div>
+                                <div class="calendar-cell">8</div>
+                                <div class="calendar-cell has-event">9<span class="dot"></span></div>
+                                <div class="calendar-cell">10</div>
+                                <div class="calendar-cell">11</div>
+                                <div class="calendar-cell">12</div>
+
+                                <div class="calendar-cell">13</div>
+                                <div class="calendar-cell">14</div>
+                                <div class="calendar-cell has-event today">15<span class="dot"></span></div>
+                                <div class="calendar-cell">16</div>
+                                <div class="calendar-cell has-event">17<span class="dot"></span></div>
+                                <div class="calendar-cell">18</div>
+                                <div class="calendar-cell">19</div>
+
+                                <div class="calendar-cell">20</div>
+                                <div class="calendar-cell">21</div>
+                                <div class="calendar-cell">22</div>
+                                <div class="calendar-cell has-event">23<span class="dot"></span></div>
+                                <div class="calendar-cell">24</div>
+                                <div class="calendar-cell">25</div>
+                                <div class="calendar-cell">26</div>
+
+                                <div class="calendar-cell">27</div>
+                                <div class="calendar-cell">28</div>
+                                <div class="calendar-cell">29</div>
+                                <div class="calendar-cell">30</div>
+                                <div class="calendar-cell">31</div>
+                                <div class="calendar-cell empty"></div>
+                                <div class="calendar-cell empty"></div>
+                            </div>
+                        </div>
+
+                        <div class="agenda-card">
+                            <h3>Upcoming</h3>
+                            <div class="agenda-item">
+                                <div class="agenda-time">10:00</div>
+                                <div class="agenda-details">
+                                    <div class="name">Emily Carter</div>
+                                    <div class="treatment">Anti-wrinkle</div>
+                                </div>
+                            </div>
+                            <div class="agenda-item">
+                                <div class="agenda-time">11:30</div>
+                                <div class="agenda-details">
+                                    <div class="name">Sophie Nguyen</div>
+                                    <div class="treatment">Dermal Fillers</div>
+                                </div>
+                            </div>
+                            <div class="agenda-item">
+                                <div class="agenda-time">13:15</div>
+                                <div class="agenda-details">
+                                    <div class="name">Priya Shah</div>
+                                    <div class="treatment">Skincare Consult</div>
+                                </div>
+                            </div>
+                            <div class="agenda-item">
+                                <div class="agenda-time">15:00</div>
+                                <div class="agenda-details">
+                                    <div class="name">Hannah Wood</div>
+                                    <div class="treatment">Anti-wrinkle</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Consent Forms -->
+                <section class="view" id="view-consent">
+                    <div class="topbar">
+                        <h2>Consent Forms</h2>
+                        <button class="btn"><i class="fa-solid fa-plus"></i> New Template</button>
+                    </div>
+
+                    <div class="table-card">
+                        <h3>Templates</h3>
+                        <table>
+                            <thead>
+                                <tr><th>Form Name</th><th>Treatment</th><th>Last Updated</th><th></th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Anti-Wrinkle Consent</td>
+                                    <td>Botox</td>
+                                    <td>12 Jun 2026</td>
+                                    <td><button class="icon-btn"><i class="fa-solid fa-eye"></i></button><button class="icon-btn"><i class="fa-solid fa-pen"></i></button></td>
+                                </tr>
+                                <tr>
+                                    <td>Dermal Filler Consent</td>
+                                    <td>Fillers</td>
+                                    <td>2 Jun 2026</td>
+                                    <td><button class="icon-btn"><i class="fa-solid fa-eye"></i></button><button class="icon-btn"><i class="fa-solid fa-pen"></i></button></td>
+                                </tr>
+                                <tr>
+                                    <td>Skincare Treatment Consent</td>
+                                    <td>Skincare</td>
+                                    <td>28 May 2026</td>
+                                    <td><button class="icon-btn"><i class="fa-solid fa-eye"></i></button><button class="icon-btn"><i class="fa-solid fa-pen"></i></button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="table-card">
+                        <h3>Client Submissions</h3>
+                        <table>
+                            <thead>
+                                <tr><th>Client</th><th>Form</th><th>Submitted</th><th>Status</th><th></th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Emily Carter</td>
+                                    <td>Anti-Wrinkle Consent</td>
+                                    <td>28 Jun 2026</td>
+                                    <td><span class="status-pill status-signed">Signed</span></td>
+                                    <td><button class="icon-btn"><i class="fa-solid fa-eye"></i></button></td>
+                                </tr>
+                                <tr>
+                                    <td>Priya Shah</td>
+                                    <td>Skincare Treatment Consent</td>
+                                    <td>—</td>
+                                    <td><span class="status-pill status-pending">Pending</span></td>
+                                    <td><button class="icon-btn"><i class="fa-solid fa-paper-plane"></i></button></td>
+                                </tr>
+                                <tr>
+                                    <td>Louise Adams</td>
+                                    <td>Dermal Filler Consent</td>
+                                    <td>14 Apr 2026</td>
+                                    <td><span class="status-pill status-expired">Expired</span></td>
+                                    <td><button class="icon-btn"><i class="fa-solid fa-rotate"></i></button></td>
+                                </tr>
+                                <tr>
+                                    <td>Hannah Wood</td>
+                                    <td>Anti-Wrinkle Consent</td>
+                                    <td>30 Jun 2026</td>
+                                    <td><span class="status-pill status-signed">Signed</span></td>
+                                    <td><button class="icon-btn"><i class="fa-solid fa-eye"></i></button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Clients -->
+                <section class="view" id="view-clients">
+                    <div class="topbar">
+                        <h2>Clients</h2>
+                    </div>
+                    <div class="coming-soon">
+                        <i class="fa-solid fa-users"></i>
+                        Client profiles &amp; treatment history — coming soon
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // ---- UI-only wiring: no real auth, no real data, nothing persists ----
+        const loginScreen = document.getElementById('login-screen');
+        const adminShell = document.getElementById('admin-shell');
+        const loginBtn = document.getElementById('login-btn');
+
+        loginBtn.addEventListener('click', () => {
+            loginScreen.style.display = 'none';
+            adminShell.classList.add('active');
+        });
+
+        document.getElementById('logout-link').addEventListener('click', (e) => {
+            e.preventDefault();
+            adminShell.classList.remove('active');
+            loginScreen.style.display = 'flex';
+        });
+
+        // View switching
+        const navLinks = document.querySelectorAll('.nav-link');
+        const views = document.querySelectorAll('.view');
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = link.getAttribute('data-view');
+
+                navLinks.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+
+                views.forEach(v => v.classList.remove('active'));
+                document.getElementById('view-' + target).classList.add('active');
+
+                sidebar.classList.remove('open');
+                sidebarOverlay.classList.remove('active');
+            });
+        });
+
+        // Mobile sidebar toggle
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const hamburgerToggle = document.getElementById('hamburger-toggle');
+
+        hamburgerToggle.addEventListener('click', () => {
+            sidebar.classList.add('open');
+            sidebarOverlay.classList.add('active');
+        });
+
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            sidebarOverlay.classList.remove('active');
+        });
+    </script>
+</body>
+</html>
