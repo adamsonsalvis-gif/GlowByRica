@@ -514,7 +514,8 @@
             left: -160px;
         }
 
-        .about-photo-mobile {
+        .about-photo-mobile,
+        .about-photo-pusher {
             display: none;
         }
 
@@ -1096,14 +1097,26 @@
 
             .about-photo { display: none; }
 
+            /* Zero-width float that reserves vertical space, so the photo
+               (clear: right) starts lower while text above stays full-width.
+               A margin-top on the photo itself can't do this: text wraps the
+               float's margin box, so the margin area still excludes text. */
+            .about-photo-pusher {
+                display: block;
+                float: right;
+                width: 0;
+                height: 7rem;
+            }
+
             .about-photo-mobile {
                 display: block;
                 float: right;
+                clear: right;
                 width: 130px;
                 aspect-ratio: 842 / 1027;
                 overflow: hidden;
                 position: relative;
-                margin: 6rem 0 1rem 0.8rem;
+                margin: 0 0 1rem 0.8rem;
                 border-radius: 6px;
             }
 
@@ -1232,6 +1245,7 @@
             <div class="about-text">
                 <h2 class="section-title">About Rica</h2>
                 <div class="section-divider"></div>
+                <div class="about-photo-pusher"></div>
                 <div class="about-photo-mobile"><img src="images/ME4.png" alt="Rica"></div>
                 <p>Hi, I'm Rica - an NMC registered nurse, certified aesthetic injector passionate about helping you feel confident and beautiful in your own skin. Every treatment I offer is tailored to your unique features and goals, with a focus on natural-looking, long-lasting results.</p>
                 <p>I use only MHRA-approved products and the latest techniques to ensure your safety, comfort, and satisfaction. Whether you're exploring aesthetics for the first time or looking to refresh your routine, I'm here to guide you every step of the way.</p>
