@@ -348,6 +348,21 @@
         .calendar-cell.empty { background: transparent; border: none; }
         .calendar-cell.today { border: 1px solid #C9A463; background: #fff; }
 
+        .calendar-cell:not(.empty) {
+            cursor: pointer;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .calendar-cell:not(.empty):hover { background: rgba(201,164,99,0.25); }
+
+        .calendar-cell.selected {
+            background: #6B1D1D !important;
+            color: #FAF3EB;
+            box-shadow: 0 0 0 2px #6B1D1D;
+        }
+
+        .calendar-cell.selected .dot { background: #C9A463; }
+
         .calendar-cell .dot {
             width: 6px;
             height: 6px;
@@ -706,18 +721,14 @@
                         <h2>Calendar</h2>
                         <button class="btn" id="open-appointment-modal"><i class="fa-solid fa-plus"></i> New Appointment</button>
                     </div>
-                    <p style="font-size:0.78rem; color:#a17b7b; margin-top:-1.3rem; margin-bottom:1.5rem;">
-                        The month grid below is a static preview — the Upcoming list on the right reflects real bookings.
-                    </p>
-
                     <div class="calendar-layout">
                         <div class="calendar-card">
                             <div class="calendar-nav">
-                                <button><i class="fa-solid fa-chevron-left"></i></button>
-                                <h3>July 2026</h3>
-                                <button><i class="fa-solid fa-chevron-right"></i></button>
+                                <button id="cal-prev"><i class="fa-solid fa-chevron-left"></i></button>
+                                <h3 id="cal-month-label">July 2026</h3>
+                                <button id="cal-next"><i class="fa-solid fa-chevron-right"></i></button>
                             </div>
-                            <div class="calendar-grid">
+                            <div class="calendar-grid" id="calendar-grid">
                                 <div class="day-label">Mon</div>
                                 <div class="day-label">Tue</div>
                                 <div class="day-label">Wed</div>
@@ -725,51 +736,15 @@
                                 <div class="day-label">Fri</div>
                                 <div class="day-label">Sat</div>
                                 <div class="day-label">Sun</div>
-
-                                <div class="calendar-cell empty"></div>
-                                <div class="calendar-cell empty"></div>
-                                <div class="calendar-cell">1<span class="dot"></span></div>
-                                <div class="calendar-cell has-event">2<span class="dot"></span></div>
-                                <div class="calendar-cell">3</div>
-                                <div class="calendar-cell">4</div>
-                                <div class="calendar-cell">5</div>
-
-                                <div class="calendar-cell">6</div>
-                                <div class="calendar-cell has-event">7<span class="dot"></span></div>
-                                <div class="calendar-cell">8</div>
-                                <div class="calendar-cell has-event">9<span class="dot"></span></div>
-                                <div class="calendar-cell">10</div>
-                                <div class="calendar-cell">11</div>
-                                <div class="calendar-cell">12</div>
-
-                                <div class="calendar-cell">13</div>
-                                <div class="calendar-cell">14</div>
-                                <div class="calendar-cell has-event today">15<span class="dot"></span></div>
-                                <div class="calendar-cell">16</div>
-                                <div class="calendar-cell has-event">17<span class="dot"></span></div>
-                                <div class="calendar-cell">18</div>
-                                <div class="calendar-cell">19</div>
-
-                                <div class="calendar-cell">20</div>
-                                <div class="calendar-cell">21</div>
-                                <div class="calendar-cell">22</div>
-                                <div class="calendar-cell has-event">23<span class="dot"></span></div>
-                                <div class="calendar-cell">24</div>
-                                <div class="calendar-cell">25</div>
-                                <div class="calendar-cell">26</div>
-
-                                <div class="calendar-cell">27</div>
-                                <div class="calendar-cell">28</div>
-                                <div class="calendar-cell">29</div>
-                                <div class="calendar-cell">30</div>
-                                <div class="calendar-cell">31</div>
-                                <div class="calendar-cell empty"></div>
-                                <div class="calendar-cell empty"></div>
+                                <!-- date cells rendered by renderCalendar() -->
                             </div>
                         </div>
 
                         <div class="agenda-card">
-                            <h3>Upcoming</h3>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                                <h3 id="agenda-title" style="margin-bottom:0;">Upcoming</h3>
+                                <a href="#" id="agenda-back-link" style="display:none; font-size:0.75rem; color:#6B1D1D; text-decoration:underline;">Show upcoming</a>
+                            </div>
                             <div id="agenda-list">
                                 <p class="empty-state">Loading…</p>
                             </div>
@@ -1001,7 +976,7 @@
 
         async function loadAllData() {
             document.getElementById('dashboard-date').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-            await Promise.all([loadDashboard(), loadAgenda(), loadConsentSubmissions()]);
+            await Promise.all([loadDashboard(), loadAgenda(), loadConsentSubmissions(), renderCalendar()]);
         }
 
         async function loadDashboard() {
@@ -1049,28 +1024,115 @@
                 : '<p class="empty-state">No consent forms yet.</p>';
         }
 
-        async function loadAgenda() {
-            const today = todayISO();
-            const { data } = await supabaseClient
-                .from('appointments')
-                .select('*')
-                .gte('appointment_date', today)
-                .order('appointment_date')
-                .order('appointment_time')
-                .limit(8);
+        let selectedCalendarDate = null; // ISO date string, or null = show upcoming
 
+        async function loadAgenda() {
             const agendaEl = document.getElementById('agenda-list');
+            const titleEl = document.getElementById('agenda-title');
+            const backLink = document.getElementById('agenda-back-link');
+
+            let query = supabaseClient.from('appointments').select('*').order('appointment_time');
+
+            if (selectedCalendarDate) {
+                titleEl.textContent = formatDate(selectedCalendarDate);
+                backLink.style.display = 'inline';
+                query = query.eq('appointment_date', selectedCalendarDate);
+            } else {
+                titleEl.textContent = 'Upcoming';
+                backLink.style.display = 'none';
+                query = query.gte('appointment_date', todayISO()).order('appointment_date').limit(8);
+            }
+
+            const { data } = await query;
+
             agendaEl.innerHTML = (data && data.length)
                 ? data.map(a => `
                     <div class="agenda-item">
                         <div class="agenda-time">${formatTime(a.appointment_time)}</div>
                         <div class="agenda-details">
                             <div class="name">${escapeHtml(a.client_name)}</div>
-                            <div class="treatment">${escapeHtml(a.treatment)} · ${formatDate(a.appointment_date)}</div>
+                            <div class="treatment">${escapeHtml(a.treatment)}${selectedCalendarDate ? '' : ' · ' + formatDate(a.appointment_date)}</div>
                         </div>
                     </div>`).join('')
-                : '<p class="empty-state">No upcoming appointments.</p>';
+                : `<p class="empty-state">${selectedCalendarDate ? 'No appointments booked this day.' : 'No upcoming appointments.'}</p>`;
         }
+
+        document.getElementById('agenda-back-link').addEventListener('click', (e) => {
+            e.preventDefault();
+            selectedCalendarDate = null;
+            document.querySelectorAll('.calendar-cell.selected').forEach(c => c.classList.remove('selected'));
+            loadAgenda();
+        });
+
+        // ---------- Calendar month grid ----------
+        const now = new Date();
+        let calendarViewYear = now.getFullYear();
+        let calendarViewMonth = now.getMonth(); // 0-indexed
+
+        async function renderCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            const monthLabel = document.getElementById('cal-month-label');
+
+            const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            monthLabel.textContent = `${monthNames[calendarViewMonth]} ${calendarViewYear}`;
+
+            const firstOfMonth = new Date(calendarViewYear, calendarViewMonth, 1);
+            const daysInMonth = new Date(calendarViewYear, calendarViewMonth + 1, 0).getDate();
+            const leadingBlanks = (firstOfMonth.getDay() + 6) % 7; // week starts Monday
+
+            const monthStart = `${calendarViewYear}-${String(calendarViewMonth + 1).padStart(2, '0')}-01`;
+            const monthEnd = `${calendarViewYear}-${String(calendarViewMonth + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+
+            const { data } = await supabaseClient
+                .from('appointments')
+                .select('appointment_date')
+                .gte('appointment_date', monthStart)
+                .lte('appointment_date', monthEnd);
+
+            const bookedDates = new Set((data || []).map(a => a.appointment_date));
+            const todayStr = todayISO();
+
+            // Remove old date cells, keep the 7 day-label headers
+            grid.querySelectorAll('.calendar-cell').forEach(c => c.remove());
+
+            for (let i = 0; i < leadingBlanks; i++) {
+                const blank = document.createElement('div');
+                blank.className = 'calendar-cell empty';
+                grid.appendChild(blank);
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${calendarViewYear}-${String(calendarViewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const cell = document.createElement('div');
+                cell.className = 'calendar-cell';
+                if (dateStr === todayStr) cell.classList.add('today');
+                if (bookedDates.has(dateStr)) cell.classList.add('has-event');
+                if (dateStr === selectedCalendarDate) cell.classList.add('selected');
+                cell.dataset.date = dateStr;
+                cell.innerHTML = bookedDates.has(dateStr) ? `${day}<span class="dot"></span>` : `${day}`;
+
+                cell.addEventListener('click', () => {
+                    selectedCalendarDate = (selectedCalendarDate === dateStr) ? null : dateStr;
+                    grid.querySelectorAll('.calendar-cell.selected').forEach(c => c.classList.remove('selected'));
+                    if (selectedCalendarDate) cell.classList.add('selected');
+                    loadAgenda();
+                });
+
+                grid.appendChild(cell);
+            }
+        }
+
+        document.getElementById('cal-prev').addEventListener('click', () => {
+            calendarViewMonth--;
+            if (calendarViewMonth < 0) { calendarViewMonth = 11; calendarViewYear--; }
+            renderCalendar();
+        });
+
+        document.getElementById('cal-next').addEventListener('click', () => {
+            calendarViewMonth++;
+            if (calendarViewMonth > 11) { calendarViewMonth = 0; calendarViewYear++; }
+            renderCalendar();
+        });
 
         async function loadConsentSubmissions() {
             const { data } = await supabaseClient
@@ -1139,6 +1201,7 @@
             document.getElementById('appt-price').value = '';
             loadDashboard();
             loadAgenda();
+            renderCalendar();
         });
 
         // ---------- New Consent Submission modal ----------
