@@ -73,6 +73,22 @@ if (heroLogo) {
         heroLogo.addEventListener('mouseleave', () => {
             clearInterval(sparkleInterval);
         });
+    } else {
+        // Touch devices have no hover — sparkle automatically while the logo is on screen
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    if (!sparkleInterval) {
+                        sparkleInterval = setInterval(createLogoSparkle, 300);
+                    }
+                } else if (sparkleInterval) {
+                    clearInterval(sparkleInterval);
+                    sparkleInterval = null;
+                }
+            });
+        }, { threshold: 0.3 });
+
+        observer.observe(heroLogo);
     }
 }
 
