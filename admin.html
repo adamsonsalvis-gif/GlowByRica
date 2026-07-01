@@ -8,6 +8,8 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Admin Portal - Glow By Rica</title>
     <link rel="icon" type="image/jpeg" href="images/GLOW2.jpg">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
     <style>
         /*
           UI SKETCH ONLY — no backend wired up yet.
@@ -477,6 +479,79 @@
 
         .coming-soon i { font-size: 2rem; color: #C9A463; margin-bottom: 1rem; display: block; }
 
+        /* ---------- Modal ---------- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(58,13,13,0.5);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal-card {
+            background: #FAF3EB;
+            border-radius: 16px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+
+        .modal-card h3 {
+            font-family: "Cinzel", serif;
+            font-size: 1.1rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .modal-card label {
+            display: block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6B1D1D;
+            margin-bottom: 0.3rem;
+        }
+
+        .modal-card input,
+        .modal-card select {
+            width: 100%;
+            padding: 0.65rem 0.8rem;
+            border-radius: 8px;
+            border: 1px solid rgba(58,13,13,0.2);
+            font-family: "Quicksand", sans-serif;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            background: #fff;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.7rem;
+            justify-content: flex-end;
+            margin-top: 0.3rem;
+        }
+
+        .modal-error {
+            color: #b23a3a;
+            font-size: 0.8rem;
+            margin-bottom: 0.8rem;
+            display: none;
+        }
+
+        .modal-error.active { display: block; }
+
+        .empty-state {
+            text-align: center;
+            padding: 1.5rem 0;
+            color: #a17b7b;
+            font-size: 0.85rem;
+        }
+
         /* ---------- Mobile ---------- */
         .mobile-topbar { display: none; }
 
@@ -535,16 +610,15 @@
 </head>
 <body>
 
-    <!-- Placeholder login gate (UI only, not real auth) -->
     <div id="login-screen">
         <div class="login-card">
             <img src="images/GLOW.png" alt="Glow By Rica">
             <h1>Admin Portal</h1>
             <p class="sub">Sign in to manage bookings &amp; consent forms</p>
+            <p class="modal-error" id="login-error"></p>
             <input type="email" placeholder="Email" id="login-email">
             <input type="password" placeholder="Password" id="login-password">
             <button id="login-btn">Sign In</button>
-            <p class="login-note">Preview build — sign-in isn't connected to a real account yet.</p>
         </div>
     </div>
 
@@ -583,28 +657,28 @@
                 <section class="view active" id="view-dashboard">
                     <div class="topbar">
                         <h2>Welcome back, Rica</h2>
-                        <span class="badge">Wed 1 Jul</span>
+                        <span class="badge" id="dashboard-date"></span>
                     </div>
 
                     <div class="stat-grid">
                         <div class="stat-card">
                             <i class="fa-solid fa-calendar-check"></i>
-                            <div class="stat-number">5</div>
+                            <div class="stat-number" id="stat-today-appts">—</div>
                             <div class="stat-label">Today's Appointments</div>
                         </div>
                         <div class="stat-card">
                             <i class="fa-solid fa-file-signature"></i>
-                            <div class="stat-number">3</div>
+                            <div class="stat-number" id="stat-pending-consent">—</div>
                             <div class="stat-label">Consent Forms Pending</div>
                         </div>
                         <div class="stat-card">
                             <i class="fa-solid fa-user-plus"></i>
-                            <div class="stat-number">2</div>
+                            <div class="stat-number" id="stat-new-clients">—</div>
                             <div class="stat-label">New Clients This Week</div>
                         </div>
                         <div class="stat-card">
                             <i class="fa-solid fa-sterling-sign"></i>
-                            <div class="stat-number">£640</div>
+                            <div class="stat-number" id="stat-booked-today">—</div>
                             <div class="stat-label">Booked Today</div>
                         </div>
                     </div>
@@ -612,37 +686,15 @@
                     <div class="panel-grid">
                         <div class="panel">
                             <h3>Today's Appointments</h3>
-                            <div class="list-row">
-                                <div><strong>Emily Carter</strong><div class="meta">Anti-wrinkle · 10:00am</div></div>
-                                <span class="status-pill status-signed">Confirmed</span>
-                            </div>
-                            <div class="list-row">
-                                <div><strong>Sophie Nguyen</strong><div class="meta">Dermal Fillers · 11:30am</div></div>
-                                <span class="status-pill status-signed">Confirmed</span>
-                            </div>
-                            <div class="list-row">
-                                <div><strong>Priya Shah</strong><div class="meta">Skincare Consult · 1:15pm</div></div>
-                                <span class="status-pill status-pending">Awaiting Form</span>
-                            </div>
-                            <div class="list-row">
-                                <div><strong>Hannah Wood</strong><div class="meta">Anti-wrinkle · 3:00pm</div></div>
-                                <span class="status-pill status-signed">Confirmed</span>
+                            <div id="today-appointments-list">
+                                <p class="empty-state">Loading…</p>
                             </div>
                         </div>
 
                         <div class="panel">
                             <h3>Recent Consent Forms</h3>
-                            <div class="list-row">
-                                <div><strong>Priya Shah</strong><div class="meta">Skincare Consent</div></div>
-                                <span class="status-pill status-pending">Pending</span>
-                            </div>
-                            <div class="list-row">
-                                <div><strong>Emily Carter</strong><div class="meta">Anti-wrinkle Consent</div></div>
-                                <span class="status-pill status-signed">Signed</span>
-                            </div>
-                            <div class="list-row">
-                                <div><strong>Louise Adams</strong><div class="meta">Filler Consent</div></div>
-                                <span class="status-pill status-expired">Expired</span>
+                            <div id="recent-consent-list">
+                                <p class="empty-state">Loading…</p>
                             </div>
                         </div>
                     </div>
@@ -652,8 +704,11 @@
                 <section class="view" id="view-calendar">
                     <div class="topbar">
                         <h2>Calendar</h2>
-                        <button class="btn"><i class="fa-solid fa-plus"></i> New Appointment</button>
+                        <button class="btn" id="open-appointment-modal"><i class="fa-solid fa-plus"></i> New Appointment</button>
                     </div>
+                    <p style="font-size:0.78rem; color:#a17b7b; margin-top:-1.3rem; margin-bottom:1.5rem;">
+                        The month grid below is a static preview — the Upcoming list on the right reflects real bookings.
+                    </p>
 
                     <div class="calendar-layout">
                         <div class="calendar-card">
@@ -715,33 +770,8 @@
 
                         <div class="agenda-card">
                             <h3>Upcoming</h3>
-                            <div class="agenda-item">
-                                <div class="agenda-time">10:00</div>
-                                <div class="agenda-details">
-                                    <div class="name">Emily Carter</div>
-                                    <div class="treatment">Anti-wrinkle</div>
-                                </div>
-                            </div>
-                            <div class="agenda-item">
-                                <div class="agenda-time">11:30</div>
-                                <div class="agenda-details">
-                                    <div class="name">Sophie Nguyen</div>
-                                    <div class="treatment">Dermal Fillers</div>
-                                </div>
-                            </div>
-                            <div class="agenda-item">
-                                <div class="agenda-time">13:15</div>
-                                <div class="agenda-details">
-                                    <div class="name">Priya Shah</div>
-                                    <div class="treatment">Skincare Consult</div>
-                                </div>
-                            </div>
-                            <div class="agenda-item">
-                                <div class="agenda-time">15:00</div>
-                                <div class="agenda-details">
-                                    <div class="name">Hannah Wood</div>
-                                    <div class="treatment">Anti-wrinkle</div>
-                                </div>
+                            <div id="agenda-list">
+                                <p class="empty-state">Loading…</p>
                             </div>
                         </div>
                     </div>
@@ -751,7 +781,7 @@
                 <section class="view" id="view-consent">
                     <div class="topbar">
                         <h2>Consent Forms</h2>
-                        <button class="btn"><i class="fa-solid fa-plus"></i> New Template</button>
+                        <button class="btn" id="open-consent-modal"><i class="fa-solid fa-plus"></i> New Submission</button>
                     </div>
 
                     <div class="table-card">
@@ -787,37 +817,10 @@
                         <h3>Client Submissions</h3>
                         <table>
                             <thead>
-                                <tr><th>Client</th><th>Form</th><th>Submitted</th><th>Status</th><th></th></tr>
+                                <tr><th>Client</th><th>Form</th><th>Submitted</th><th>Status</th></tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Emily Carter</td>
-                                    <td>Anti-Wrinkle Consent</td>
-                                    <td>28 Jun 2026</td>
-                                    <td><span class="status-pill status-signed">Signed</span></td>
-                                    <td><button class="icon-btn"><i class="fa-solid fa-eye"></i></button></td>
-                                </tr>
-                                <tr>
-                                    <td>Priya Shah</td>
-                                    <td>Skincare Treatment Consent</td>
-                                    <td>—</td>
-                                    <td><span class="status-pill status-pending">Pending</span></td>
-                                    <td><button class="icon-btn"><i class="fa-solid fa-paper-plane"></i></button></td>
-                                </tr>
-                                <tr>
-                                    <td>Louise Adams</td>
-                                    <td>Dermal Filler Consent</td>
-                                    <td>14 Apr 2026</td>
-                                    <td><span class="status-pill status-expired">Expired</span></td>
-                                    <td><button class="icon-btn"><i class="fa-solid fa-rotate"></i></button></td>
-                                </tr>
-                                <tr>
-                                    <td>Hannah Wood</td>
-                                    <td>Anti-Wrinkle Consent</td>
-                                    <td>30 Jun 2026</td>
-                                    <td><span class="status-pill status-signed">Signed</span></td>
-                                    <td><button class="icon-btn"><i class="fa-solid fa-eye"></i></button></td>
-                                </tr>
+                            <tbody id="consent-submissions-tbody">
+                                <tr><td colspan="4" class="empty-state">Loading…</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -838,21 +841,104 @@
         </div>
     </div>
 
+    <!-- New Appointment modal -->
+    <div class="modal-overlay" id="appointment-modal-overlay">
+        <div class="modal-card">
+            <h3>New Appointment</h3>
+            <p class="modal-error" id="appointment-error"></p>
+            <label>Client Name</label>
+            <input type="text" id="appt-client-name">
+            <label>Treatment</label>
+            <input type="text" id="appt-treatment" placeholder="e.g. Anti-wrinkle">
+            <label>Date</label>
+            <input type="date" id="appt-date">
+            <label>Time</label>
+            <input type="time" id="appt-time">
+            <label>Price (£, optional)</label>
+            <input type="number" id="appt-price" min="0" step="0.01">
+            <div class="modal-actions">
+                <button class="btn btn-outline" id="cancel-appointment-modal">Cancel</button>
+                <button class="btn" id="save-appointment">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Consent Submission modal -->
+    <div class="modal-overlay" id="consent-modal-overlay">
+        <div class="modal-card">
+            <h3>New Consent Submission</h3>
+            <p class="modal-error" id="consent-error"></p>
+            <label>Client Name</label>
+            <input type="text" id="consent-client-name">
+            <label>Form Template</label>
+            <select id="consent-template">
+                <option>Anti-Wrinkle Consent</option>
+                <option>Dermal Filler Consent</option>
+                <option>Skincare Treatment Consent</option>
+            </select>
+            <label>Status</label>
+            <select id="consent-status">
+                <option value="pending">Pending</option>
+                <option value="signed">Signed</option>
+                <option value="expired">Expired</option>
+            </select>
+            <div class="modal-actions">
+                <button class="btn btn-outline" id="cancel-consent-modal">Cancel</button>
+                <button class="btn" id="save-consent">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // ---- UI-only wiring: no real auth, no real data, nothing persists ----
         const loginScreen = document.getElementById('login-screen');
         const adminShell = document.getElementById('admin-shell');
         const loginBtn = document.getElementById('login-btn');
+        const loginError = document.getElementById('login-error');
 
-        loginBtn.addEventListener('click', () => {
-            loginScreen.style.display = 'none';
-            adminShell.classList.add('active');
-        });
-
-        document.getElementById('logout-link').addEventListener('click', (e) => {
-            e.preventDefault();
+        function showLoggedOut(message) {
             adminShell.classList.remove('active');
             loginScreen.style.display = 'flex';
+            loginError.textContent = message || '';
+            loginError.classList.toggle('active', !!message);
+        }
+
+        function showLoggedIn() {
+            loginScreen.style.display = 'none';
+            adminShell.classList.add('active');
+            loadAllData();
+        }
+
+        loginBtn.addEventListener('click', async () => {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Signing in…';
+
+            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'Sign In';
+
+            if (error) {
+                loginError.textContent = error.message;
+                loginError.classList.add('active');
+                return;
+            }
+
+            showLoggedIn();
+        });
+
+        document.getElementById('logout-link').addEventListener('click', async (e) => {
+            e.preventDefault();
+            await supabaseClient.auth.signOut();
+            showLoggedOut();
+        });
+
+        // Restore session on load (page refresh keeps her logged in)
+        supabaseClient.auth.getSession().then(({ data }) => {
+            if (data.session) {
+                showLoggedIn();
+            }
         });
 
         // View switching
@@ -888,6 +974,210 @@
         sidebarOverlay.addEventListener('click', () => {
             sidebar.classList.remove('open');
             sidebarOverlay.classList.remove('active');
+        });
+
+        // ---------- Data loading ----------
+        function todayISO() {
+            const d = new Date();
+            return d.toISOString().slice(0, 10);
+        }
+
+        function formatTime(t) {
+            if (!t) return '';
+            const [h, m] = t.split(':');
+            const hour = parseInt(h, 10);
+            const ampm = hour >= 12 ? 'pm' : 'am';
+            const hour12 = ((hour + 11) % 12) + 1;
+            return `${hour12}:${m}${ampm}`;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '—';
+            return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        const statusPillClass = { confirmed: 'status-signed', pending: 'status-pending', cancelled: 'status-expired', signed: 'status-signed', expired: 'status-expired' };
+        const statusLabel = { confirmed: 'Confirmed', pending: 'Pending', cancelled: 'Cancelled', signed: 'Signed', expired: 'Expired' };
+
+        async function loadAllData() {
+            document.getElementById('dashboard-date').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+            await Promise.all([loadDashboard(), loadAgenda(), loadConsentSubmissions()]);
+        }
+
+        async function loadDashboard() {
+            const today = todayISO();
+            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+            const [todayApptsRes, pendingConsentRes, weekApptsRes] = await Promise.all([
+                supabaseClient.from('appointments').select('*').eq('appointment_date', today).order('appointment_time'),
+                supabaseClient.from('consent_forms').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+                supabaseClient.from('appointments').select('client_name').gte('created_at', weekAgo)
+            ]);
+
+            const todayAppts = todayApptsRes.data || [];
+            document.getElementById('stat-today-appts').textContent = todayAppts.length;
+            document.getElementById('stat-pending-consent').textContent = pendingConsentRes.count ?? '0';
+
+            const uniqueClients = new Set((weekApptsRes.data || []).map(a => a.client_name));
+            document.getElementById('stat-new-clients').textContent = uniqueClients.size;
+
+            const bookedToday = todayAppts.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
+            document.getElementById('stat-booked-today').textContent = bookedToday > 0 ? `£${bookedToday.toFixed(0)}` : '£0';
+
+            const listEl = document.getElementById('today-appointments-list');
+            listEl.innerHTML = todayAppts.length
+                ? todayAppts.map(a => `
+                    <div class="list-row">
+                        <div><strong>${escapeHtml(a.client_name)}</strong><div class="meta">${escapeHtml(a.treatment)} · ${formatTime(a.appointment_time)}</div></div>
+                        <span class="status-pill ${statusPillClass[a.status] || 'status-pending'}">${statusLabel[a.status] || a.status}</span>
+                    </div>`).join('')
+                : '<p class="empty-state">No appointments booked for today.</p>';
+
+            const { data: recentConsent } = await supabaseClient
+                .from('consent_forms')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(3);
+
+            const recentEl = document.getElementById('recent-consent-list');
+            recentEl.innerHTML = (recentConsent && recentConsent.length)
+                ? recentConsent.map(c => `
+                    <div class="list-row">
+                        <div><strong>${escapeHtml(c.client_name)}</strong><div class="meta">${escapeHtml(c.template_name)}</div></div>
+                        <span class="status-pill ${statusPillClass[c.status] || 'status-pending'}">${statusLabel[c.status] || c.status}</span>
+                    </div>`).join('')
+                : '<p class="empty-state">No consent forms yet.</p>';
+        }
+
+        async function loadAgenda() {
+            const today = todayISO();
+            const { data } = await supabaseClient
+                .from('appointments')
+                .select('*')
+                .gte('appointment_date', today)
+                .order('appointment_date')
+                .order('appointment_time')
+                .limit(8);
+
+            const agendaEl = document.getElementById('agenda-list');
+            agendaEl.innerHTML = (data && data.length)
+                ? data.map(a => `
+                    <div class="agenda-item">
+                        <div class="agenda-time">${formatTime(a.appointment_time)}</div>
+                        <div class="agenda-details">
+                            <div class="name">${escapeHtml(a.client_name)}</div>
+                            <div class="treatment">${escapeHtml(a.treatment)} · ${formatDate(a.appointment_date)}</div>
+                        </div>
+                    </div>`).join('')
+                : '<p class="empty-state">No upcoming appointments.</p>';
+        }
+
+        async function loadConsentSubmissions() {
+            const { data } = await supabaseClient
+                .from('consent_forms')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            const tbody = document.getElementById('consent-submissions-tbody');
+            tbody.innerHTML = (data && data.length)
+                ? data.map(c => `
+                    <tr>
+                        <td>${escapeHtml(c.client_name)}</td>
+                        <td>${escapeHtml(c.template_name)}</td>
+                        <td>${c.submitted_at ? formatDate(c.submitted_at.slice(0, 10)) : '—'}</td>
+                        <td><span class="status-pill ${statusPillClass[c.status] || 'status-pending'}">${statusLabel[c.status] || c.status}</span></td>
+                    </tr>`).join('')
+                : '<tr><td colspan="4" class="empty-state">No consent forms yet.</td></tr>';
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str ?? '';
+            return div.innerHTML;
+        }
+
+        // ---------- New Appointment modal ----------
+        const appointmentModal = document.getElementById('appointment-modal-overlay');
+        document.getElementById('open-appointment-modal').addEventListener('click', () => {
+            appointmentModal.classList.add('active');
+        });
+        document.getElementById('cancel-appointment-modal').addEventListener('click', () => {
+            appointmentModal.classList.remove('active');
+        });
+
+        document.getElementById('save-appointment').addEventListener('click', async () => {
+            const client_name = document.getElementById('appt-client-name').value.trim();
+            const treatment = document.getElementById('appt-treatment').value.trim();
+            const appointment_date = document.getElementById('appt-date').value;
+            const appointment_time = document.getElementById('appt-time').value;
+            const priceVal = document.getElementById('appt-price').value;
+            const errorEl = document.getElementById('appointment-error');
+
+            if (!client_name || !treatment || !appointment_date || !appointment_time) {
+                errorEl.textContent = 'Please fill in client, treatment, date and time.';
+                errorEl.classList.add('active');
+                return;
+            }
+
+            const { error } = await supabaseClient.from('appointments').insert({
+                client_name, treatment, appointment_date, appointment_time,
+                price: priceVal ? Number(priceVal) : null
+            });
+
+            if (error) {
+                errorEl.textContent = error.message;
+                errorEl.classList.add('active');
+                return;
+            }
+
+            errorEl.classList.remove('active');
+            appointmentModal.classList.remove('active');
+            document.getElementById('appt-client-name').value = '';
+            document.getElementById('appt-treatment').value = '';
+            document.getElementById('appt-date').value = '';
+            document.getElementById('appt-time').value = '';
+            document.getElementById('appt-price').value = '';
+            loadDashboard();
+            loadAgenda();
+        });
+
+        // ---------- New Consent Submission modal ----------
+        const consentModal = document.getElementById('consent-modal-overlay');
+        document.getElementById('open-consent-modal').addEventListener('click', () => {
+            consentModal.classList.add('active');
+        });
+        document.getElementById('cancel-consent-modal').addEventListener('click', () => {
+            consentModal.classList.remove('active');
+        });
+
+        document.getElementById('save-consent').addEventListener('click', async () => {
+            const client_name = document.getElementById('consent-client-name').value.trim();
+            const template_name = document.getElementById('consent-template').value;
+            const status = document.getElementById('consent-status').value;
+            const errorEl = document.getElementById('consent-error');
+
+            if (!client_name) {
+                errorEl.textContent = 'Please enter a client name.';
+                errorEl.classList.add('active');
+                return;
+            }
+
+            const { error } = await supabaseClient.from('consent_forms').insert({
+                client_name, template_name, status,
+                submitted_at: status === 'signed' ? new Date().toISOString() : null
+            });
+
+            if (error) {
+                errorEl.textContent = error.message;
+                errorEl.classList.add('active');
+                return;
+            }
+
+            errorEl.classList.remove('active');
+            consentModal.classList.remove('active');
+            document.getElementById('consent-client-name').value = '';
+            loadDashboard();
+            loadConsentSubmissions();
         });
     </script>
 </body>
