@@ -1073,6 +1073,12 @@
                 mix-blend-mode: multiply;
                 z-index: 1;
                 display: block !important;
+                animation: hero-logo-glow 2.4s ease-in-out infinite;
+            }
+
+            @keyframes hero-logo-glow {
+                0%, 100% { filter: drop-shadow(0 0 6px rgba(201,164,99,0.5)); }
+                50% { filter: drop-shadow(0 0 22px rgba(201,164,99,0.95)) brightness(1.08); }
             }
 
             .hero-content h2 {
