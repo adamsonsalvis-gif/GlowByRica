@@ -508,6 +508,7 @@
             padding: 2.5rem;
             text-align: center;
             border: 2px solid #C9A463;
+            position: relative;
         }
 
         .book-cta h2 {
@@ -524,11 +525,23 @@
             font-style: italic;
         }
 
+        /* GLOW.png's visible mark sits ~24px below the top of the image box
+           at this size (transparent canvas padding), so top is tuned to
+           center the visible logo on the heading, not the image box. */
         .book-cta-logo {
             display: block;
             width: 150px;
-            margin: 0 auto 0.5rem;
+            position: absolute;
+            left: 1.2rem;
+            top: -21px;
             mix-blend-mode: multiply;
+        }
+
+        @media (max-width: 640px) {
+            .book-cta-logo {
+                position: static;
+                margin: 0 auto 0.5rem;
+            }
         }
 
         .cta-button {
