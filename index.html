@@ -228,6 +228,10 @@
             mix-blend-mode: multiply;
             will-change: filter, transform;
             transform: translateZ(0);
+            /* Invisible resting filter keeps the filter render path active,
+               so hover only animates values instead of re-compositing the
+               layer (which caused a pixelated flash on hover start). */
+            filter: drop-shadow(0 0 0 rgba(201,164,99,0)) brightness(1);
         }
 
         .hero-logo:hover {
