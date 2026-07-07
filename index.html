@@ -21,6 +21,11 @@
             line-height: 1.6;
         }
 
+        /* Anchor targets stop below the sticky header instead of under it */
+        section[id] {
+            scroll-margin-top: 64px;
+        }
+
         h1, h2, h3, h4 {
             font-family: "Raleway", sans-serif;
         }
