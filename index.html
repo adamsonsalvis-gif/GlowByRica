@@ -218,16 +218,20 @@
             flex: 1;
         }
 
+        /* Laid out at the hover size (445px = 420 x 1.06) and scaled DOWN to
+           420px at rest, so the raster is never stretched past its native
+           resolution on hover -- upscaling the 420px raster was what made the
+           zoom look soft/pixelated. Margins compensate so the resting logo
+           sits exactly where the old 420px layout put it. */
         .hero-logo {
-            width: 420px;
+            width: 445px;
             max-width: 100%;
-            margin-bottom: -3rem;
-            margin-left: 11rem;
+            margin: -13px 0 calc(-3rem - 25px) calc(11rem - 13px);
             transition: transform 0.4s ease, filter 0.4s ease;
             cursor: default;
             mix-blend-mode: multiply;
             will-change: filter, transform;
-            transform: translateZ(0);
+            transform: translateZ(0) scale(0.9438);
             /* Invisible resting filter keeps the filter render path active,
                so hover only animates values instead of re-compositing the
                layer (which caused a pixelated flash on hover start). */
@@ -235,7 +239,7 @@
         }
 
         .hero-logo:hover {
-            transform: scale(1.06);
+            transform: translateZ(0) scale(1);
             filter: drop-shadow(0 0 14px rgba(201,164,99,0.75)) brightness(1.1);
         }
 
