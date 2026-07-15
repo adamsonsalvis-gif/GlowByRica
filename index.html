@@ -566,6 +566,9 @@
             flex: 0 0 420px;
             align-self: flex-start;
             margin-top: -1rem;
+            /* Lifts the badges off the section's bottom edge; the section
+               itself keeps zero bottom padding so the photo can touch it. */
+            padding-bottom: 1.5rem;
         }
 
         .about-text .section-title {
@@ -1248,7 +1251,7 @@
             .about { padding-bottom: 1.5rem; }
 
             .about-inner { flex-direction: column; text-align: center; }
-            .about-text { flex: 1 1 auto; width: 100%; }
+            .about-text { flex: 1 1 auto; width: 100%; padding-bottom: 0; }
             .about-text .section-title { text-align: center; }
             .about-text .section-divider { margin: 0 auto 1.5rem; }
             .about-badges { justify-content: center; clear: both; margin-top: 0; margin-bottom: 1.5rem; }
