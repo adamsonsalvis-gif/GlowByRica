@@ -221,6 +221,22 @@ const contactForm = document.getElementById('contactForm');
 if (contactForm) {
     contactForm.addEventListener('submit', async function(e) {
         e.preventDefault();
+
+        // Hidden inputs (treatment select, date/time picker) skip native
+        // validation, so check them here and flash the field if empty.
+        const missing = Array.from(contactForm.querySelectorAll('input[type="hidden"][required]')).filter(i => !i.value);
+        if (missing.length) {
+            missing.forEach(i => {
+                const box = i.closest('.custom-select-wrapper, .datetime-wrapper');
+                const t = box && box.querySelector('.custom-select, .datetime-trigger');
+                if (t) {
+                    t.style.borderColor = '#e05c5c';
+                    setTimeout(() => { t.style.borderColor = ''; }, 2500);
+                }
+            });
+            return;
+        }
+
         const data = new FormData(contactForm);
         try {
             const response = await fetch(contactForm.action, {

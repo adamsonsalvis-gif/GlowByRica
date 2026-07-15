@@ -851,6 +851,118 @@
 
         .custom-select-options li:hover { background: rgba(201,164,99,0.15); color: #C9A463; }
 
+        /* Date & time picker (availability-aware) */
+        .datetime-wrapper { position: relative; }
+
+        .datetime-trigger {
+            width: 100%;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(201,164,99,0.4);
+            border-radius: 8px;
+            padding: 0.85rem 2.5rem 0.85rem 1rem;
+            color: rgba(230,220,203,0.5);
+            font-family: "Quicksand", sans-serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            position: relative;
+            user-select: none;
+            transition: border-color 0.3s ease;
+            text-align: left;
+        }
+
+        .datetime-trigger.selected { color: #E6DCCB; }
+        .datetime-trigger.open { border-color: #C9A463; }
+
+        .datetime-trigger::after {
+            content: '';
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid #C9A463;
+            transition: transform 0.3s ease;
+        }
+
+        .datetime-trigger.open::after { transform: translateY(-50%) rotate(180deg); }
+
+        .datetime-popup {
+            display: none;
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: #3A0D0D;
+            border: 1px solid rgba(201,164,99,0.4);
+            border-radius: 8px;
+            z-index: 120;
+            box-shadow: 0 8px 20px rgba(58,13,13,0.3);
+            padding: 1rem;
+        }
+
+        .datetime-popup.open { display: block; }
+
+        .dt-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
+        .dt-nav h4 { font-family: "Cinzel", serif; color: #C9A463; font-size: 0.95rem; font-weight: 600; }
+        .dt-nav button {
+            background: none;
+            border: 1px solid rgba(201,164,99,0.4);
+            border-radius: 6px;
+            color: #C9A463;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+        }
+
+        .dt-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .dt-day-label { text-align: center; font-size: 0.6rem; color: rgba(230,220,203,0.6); text-transform: uppercase; padding-bottom: 2px; }
+
+        .dt-cell {
+            text-align: center;
+            padding: 0.4rem 0;
+            font-size: 0.8rem;
+            color: #E6DCCB;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .dt-cell:hover { background: rgba(201,164,99,0.2); }
+        .dt-cell.disabled { color: rgba(230,220,203,0.25); cursor: default; text-decoration: line-through; }
+        .dt-cell.disabled:hover { background: none; }
+        .dt-cell.empty { cursor: default; }
+        .dt-cell.empty:hover { background: none; }
+        .dt-cell.selected-day { background: #C9A463; color: #3A0D0D; font-weight: 600; }
+
+        .dt-slots { margin-top: 0.8rem; border-top: 1px solid rgba(201,164,99,0.25); padding-top: 0.8rem; }
+        .dt-slots-title { font-size: 0.75rem; color: rgba(230,220,203,0.8); margin-bottom: 0.5rem; }
+        .dt-slot-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+
+        .dt-slot {
+            padding: 0.4rem 0;
+            text-align: center;
+            font-size: 0.75rem;
+            border: 1px solid rgba(201,164,99,0.4);
+            border-radius: 6px;
+            color: #E6DCCB;
+            cursor: pointer;
+            background: none;
+            font-family: "Quicksand", sans-serif;
+        }
+
+        .dt-slot:hover { background: rgba(201,164,99,0.2); }
+        .dt-slot.booked {
+            color: rgba(230,220,203,0.25);
+            border-color: rgba(230,220,203,0.15);
+            cursor: default;
+            text-decoration: line-through;
+        }
+        .dt-slot.booked:hover { background: none; }
+
+        .dt-loading { grid-column: 1 / -1; text-align: center; color: rgba(230,220,203,0.6); font-size: 0.8rem; padding: 0.8rem 0; }
+
         .contact-form textarea {
             min-height: 120px;
             resize: vertical;
@@ -1381,16 +1493,21 @@
                             </div>
                             <input type="hidden" name="treatment" required>
                         </div>
-                        <div class="custom-select-wrapper">
-                            <div class="custom-select" data-name="preferred_time">
-                                <div class="custom-select-trigger">Preferred Time *</div>
-                                <ul class="custom-select-options">
-                                    <li data-value="Morning">Morning</li>
-                                    <li data-value="Afternoon">Afternoon</li>
-                                    <li data-value="Evening">Evening</li>
-                                </ul>
+                        <div class="datetime-wrapper">
+                            <div class="datetime-trigger" id="dtTrigger">Choose Date &amp; Time *</div>
+                            <div class="datetime-popup" id="dtPopup">
+                                <div class="dt-nav">
+                                    <button type="button" id="dtPrev">‹</button>
+                                    <h4 id="dtMonthLabel"></h4>
+                                    <button type="button" id="dtNext">›</button>
+                                </div>
+                                <div class="dt-grid" id="dtGrid"></div>
+                                <div class="dt-slots" id="dtSlots" style="display:none;">
+                                    <div class="dt-slots-title" id="dtSlotsTitle"></div>
+                                    <div class="dt-slot-grid" id="dtSlotGrid"></div>
+                                </div>
                             </div>
-                            <input type="hidden" name="preferred_time" required>
+                            <input type="hidden" name="preferred_time" id="dtValue" required>
                         </div>
                         <textarea name="message" placeholder="Your message... *" required></textarea>
                         <button type="submit" class="contact-form-btn">Send Message</button>
@@ -1422,5 +1539,180 @@
     </button>
 
     <script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script>
+    // Availability-aware date & time picker for the contact form.
+    // Reads only taken slots / blocked days via get_public_availability()
+    // -- no client details are exposed to the public site.
+    (function() {
+        const trigger = document.getElementById('dtTrigger');
+        const popup = document.getElementById('dtPopup');
+        const grid = document.getElementById('dtGrid');
+        const monthLabel = document.getElementById('dtMonthLabel');
+        const slotsPanel = document.getElementById('dtSlots');
+        const slotsTitle = document.getElementById('dtSlotsTitle');
+        const slotGrid = document.getElementById('dtSlotGrid');
+        const hiddenInput = document.getElementById('dtValue');
+        if (!trigger) return;
+
+        const SLOT_HOURS = [];
+        for (let h = 9; h <= 21; h++) SLOT_HOURS.push(h); // 9:00 .. 21:00 starts (last ends 22:00)
+
+        const now = new Date();
+        let viewYear = now.getFullYear();
+        let viewMonth = now.getMonth();
+        let bookedMap = {};        // 'YYYY-MM-DD' -> Set('HH:MM')
+        let blockedSet = new Set(); // fully unavailable days
+        let selectedDay = null;
+        let loadedOnce = false;
+
+        const pad = n => String(n).padStart(2, '0');
+        const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+        function todayStr() {
+            const d = new Date();
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        }
+
+        async function loadMonth() {
+            const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+            const from = `${viewYear}-${pad(viewMonth + 1)}-01`;
+            const to = `${viewYear}-${pad(viewMonth + 1)}-${pad(daysInMonth)}`;
+
+            monthLabel.textContent = `${monthNames[viewMonth]} ${viewYear}`;
+            grid.innerHTML = '<div class="dt-loading">Loading availability…</div>';
+            slotsPanel.style.display = 'none';
+            selectedDay = null;
+
+            let rows = [];
+            try {
+                const { data, error } = await supabaseClient.rpc('get_public_availability', { from_date: from, to_date: to });
+                if (error) throw error;
+                rows = data || [];
+            } catch (err) {
+                grid.innerHTML = '<div class="dt-loading">Couldn\'t load availability — please mention your preferred time in the message instead.</div>';
+                return;
+            }
+
+            bookedMap = {};
+            blockedSet = new Set();
+            rows.forEach(r => {
+                if (r.slot === null) {
+                    blockedSet.add(r.day);
+                } else {
+                    if (!bookedMap[r.day]) bookedMap[r.day] = new Set();
+                    bookedMap[r.day].add(r.slot.slice(0, 5));
+                }
+            });
+
+            renderGrid();
+        }
+
+        function renderGrid() {
+            grid.innerHTML = '';
+            ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(d => {
+                const label = document.createElement('div');
+                label.className = 'dt-day-label';
+                label.textContent = d;
+                grid.appendChild(label);
+            });
+
+            const firstOfMonth = new Date(viewYear, viewMonth, 1);
+            const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+            const leadingBlanks = (firstOfMonth.getDay() + 6) % 7;
+            const today = todayStr();
+
+            for (let i = 0; i < leadingBlanks; i++) {
+                const blank = document.createElement('div');
+                blank.className = 'dt-cell empty';
+                grid.appendChild(blank);
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`;
+                const cell = document.createElement('div');
+                cell.className = 'dt-cell';
+                cell.textContent = day;
+
+                const fullyBooked = bookedMap[dateStr] && bookedMap[dateStr].size >= SLOT_HOURS.length;
+                const unavailable = dateStr < today || blockedSet.has(dateStr) || fullyBooked;
+
+                if (unavailable) {
+                    cell.classList.add('disabled');
+                } else {
+                    if (dateStr === selectedDay) cell.classList.add('selected-day');
+                    cell.addEventListener('click', () => selectDay(dateStr, cell));
+                }
+                grid.appendChild(cell);
+            }
+        }
+
+        function selectDay(dateStr, cell) {
+            selectedDay = dateStr;
+            grid.querySelectorAll('.dt-cell.selected-day').forEach(c => c.classList.remove('selected-day'));
+            cell.classList.add('selected-day');
+
+            const d = new Date(dateStr + 'T00:00:00');
+            const nice = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+            slotsTitle.textContent = `Available times — ${nice}`;
+            slotGrid.innerHTML = '';
+
+            const taken = bookedMap[dateStr] || new Set();
+            SLOT_HOURS.forEach(h => {
+                const t = `${pad(h)}:00`;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'dt-slot';
+                btn.textContent = t;
+                if (taken.has(t)) {
+                    btn.classList.add('booked');
+                    btn.disabled = true;
+                } else {
+                    btn.addEventListener('click', () => {
+                        hiddenInput.value = `${nice}, ${t}`;
+                        trigger.textContent = `${nice}, ${t}`;
+                        trigger.classList.add('selected');
+                        closePopup();
+                    });
+                }
+                slotGrid.appendChild(btn);
+            });
+
+            slotsPanel.style.display = 'block';
+        }
+
+        function closePopup() {
+            popup.classList.remove('open');
+            trigger.classList.remove('open');
+        }
+
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const opening = !popup.classList.contains('open');
+            popup.classList.toggle('open');
+            trigger.classList.toggle('open');
+            if (opening && !loadedOnce) {
+                loadedOnce = true;
+                loadMonth();
+            }
+        });
+
+        popup.addEventListener('click', e => e.stopPropagation());
+        document.addEventListener('click', closePopup);
+
+        document.getElementById('dtPrev').addEventListener('click', () => {
+            viewMonth--;
+            if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+            loadMonth();
+        });
+
+        document.getElementById('dtNext').addEventListener('click', () => {
+            viewMonth++;
+            if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+            loadMonth();
+        });
+    })();
+    </script>
 </body>
 </html>

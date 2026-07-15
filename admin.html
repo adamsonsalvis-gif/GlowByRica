@@ -377,6 +377,12 @@
             background: rgba(201,164,99,0.18);
         }
 
+        .calendar-cell.blocked {
+            background: rgba(178,58,58,0.12);
+            color: #b23a3a;
+            text-decoration: line-through;
+        }
+
         .agenda-card {
             background: #fff;
             border-radius: 16px;
@@ -748,6 +754,7 @@
                             <div id="agenda-list">
                                 <p class="empty-state">Loading…</p>
                             </div>
+                            <button class="btn btn-outline" id="block-day-btn" style="display:none; margin-top:1rem; width:100%; justify-content:center;">Block this day</button>
                         </div>
                     </div>
                 </section>
@@ -1061,7 +1068,40 @@
             e.preventDefault();
             selectedCalendarDate = null;
             document.querySelectorAll('.calendar-cell.selected').forEach(c => c.classList.remove('selected'));
+            updateBlockDayButton();
             loadAgenda();
+        });
+
+        // ---------- Day blocking (days Rica works elsewhere) ----------
+        let blockedDaysSet = new Set();
+        const blockDayBtn = document.getElementById('block-day-btn');
+
+        function updateBlockDayButton() {
+            if (!selectedCalendarDate) {
+                blockDayBtn.style.display = 'none';
+                return;
+            }
+            blockDayBtn.style.display = 'inline-flex';
+            blockDayBtn.textContent = blockedDaysSet.has(selectedCalendarDate)
+                ? 'Unblock this day'
+                : 'Block this day';
+        }
+
+        blockDayBtn.addEventListener('click', async () => {
+            if (!selectedCalendarDate) return;
+            blockDayBtn.disabled = true;
+
+            const { error } = blockedDaysSet.has(selectedCalendarDate)
+                ? await supabaseClient.from('blocked_days').delete().eq('day', selectedCalendarDate)
+                : await supabaseClient.from('blocked_days').insert({ day: selectedCalendarDate });
+
+            blockDayBtn.disabled = false;
+            if (error) {
+                alert('Could not update: ' + error.message);
+                return;
+            }
+            await renderCalendar();
+            updateBlockDayButton();
         });
 
         // ---------- Calendar month grid ----------
@@ -1083,13 +1123,15 @@
             const monthStart = `${calendarViewYear}-${String(calendarViewMonth + 1).padStart(2, '0')}-01`;
             const monthEnd = `${calendarViewYear}-${String(calendarViewMonth + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
 
-            const { data } = await supabaseClient
-                .from('appointments')
-                .select('appointment_date')
-                .gte('appointment_date', monthStart)
-                .lte('appointment_date', monthEnd);
+            const [apptRes, blockedRes] = await Promise.all([
+                supabaseClient.from('appointments').select('appointment_date')
+                    .gte('appointment_date', monthStart).lte('appointment_date', monthEnd),
+                supabaseClient.from('blocked_days').select('day')
+                    .gte('day', monthStart).lte('day', monthEnd)
+            ]);
 
-            const bookedDates = new Set((data || []).map(a => a.appointment_date));
+            const bookedDates = new Set((apptRes.data || []).map(a => a.appointment_date));
+            blockedDaysSet = new Set((blockedRes.data || []).map(b => b.day));
             const todayStr = todayISO();
 
             // Remove old date cells, keep the 7 day-label headers
@@ -1107,6 +1149,7 @@
                 cell.className = 'calendar-cell';
                 if (dateStr === todayStr) cell.classList.add('today');
                 if (bookedDates.has(dateStr)) cell.classList.add('has-event');
+                if (blockedDaysSet.has(dateStr)) cell.classList.add('blocked');
                 if (dateStr === selectedCalendarDate) cell.classList.add('selected');
                 cell.dataset.date = dateStr;
                 cell.innerHTML = bookedDates.has(dateStr) ? `${day}<span class="dot"></span>` : `${day}`;
@@ -1115,6 +1158,7 @@
                     selectedCalendarDate = (selectedCalendarDate === dateStr) ? null : dateStr;
                     grid.querySelectorAll('.calendar-cell.selected').forEach(c => c.classList.remove('selected'));
                     if (selectedCalendarDate) cell.classList.add('selected');
+                    updateBlockDayButton();
                     loadAgenda();
                 });
 
