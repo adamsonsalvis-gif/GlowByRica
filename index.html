@@ -1274,20 +1274,23 @@
                 float: right;
                 clear: right;
                 width: 160px;
-                aspect-ratio: 802 / 1027;
+                aspect-ratio: 558 / 840;
                 overflow: hidden;
                 position: relative;
                 margin: 0 0 0 0.5rem;
                 border-radius: 6px;
             }
 
-            /* Crop to the exact opaque bounds of ME4.png (x 346-1148 of 1254) */
+            /* Crop to the SOLID pixel bounds of ME4.png (x 579-1137,
+               y 186-1026 of 1254x1027). The earlier bounds included
+               near-invisible stray pixels, leaving invisible slack
+               inside the box. */
             .about-photo-mobile img {
                 position: absolute;
-                top: 0;
-                left: -43.1%;
-                width: 156.4%;
-                height: 100%;
+                top: -22.14%;
+                left: -103.76%;
+                width: 224.73%;
+                height: 122.26%;
                 filter: drop-shadow(0 6px 16px rgba(58,13,13,0.15));
             }
 
