@@ -1247,7 +1247,14 @@
             .about-text { flex: 1 1 auto; width: 100%; }
             .about-text .section-title { text-align: center; }
             .about-text .section-divider { margin: 0 auto 1.5rem; }
-            .about-badges { justify-content: center; clear: both; margin-top: 0.25rem; margin-bottom: 1.5rem; }
+            .about-badges { justify-content: center; clear: both; margin-top: 0; margin-bottom: 1.5rem; }
+
+            /* Swap the first two badges on mobile so Aesthetic Practitioner
+               sits top-right, directly under the floated photo */
+            .about-badges .badge:nth-child(1) { order: 2; }
+            .about-badges .badge:nth-child(2) { order: 1; }
+            .about-badges .badge:nth-child(3) { order: 3; }
+            .about-badges .badge:nth-child(4) { order: 4; }
 
             .about-photo { display: none; }
 
@@ -1270,7 +1277,7 @@
                 aspect-ratio: 802 / 1027;
                 overflow: hidden;
                 position: relative;
-                margin: 0 0 0.5rem 0.5rem;
+                margin: 0 0 0 0.5rem;
                 border-radius: 6px;
             }
 
