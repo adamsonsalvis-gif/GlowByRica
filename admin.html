@@ -738,6 +738,34 @@
 
         .cp-pen.active { border-color: #3A0D0D; box-shadow: 0 0 0 2px #FAF3EB inset; }
 
+        .cp-tool {
+            background: #FAF3EB;
+            border: 1px solid rgba(58,13,13,0.2);
+            border-radius: 8px;
+            width: 34px;
+            height: 30px;
+            cursor: pointer;
+            color: #6B1D1D;
+            font-size: 0.8rem;
+        }
+
+        .cp-tool.active { background: #6B1D1D; color: #FAF3EB; border-color: #6B1D1D; }
+
+        .cp-facemap-text-input {
+            position: absolute;
+            transform: translateY(-50%);
+            z-index: 5;
+            width: 110px;
+            padding: 0.2rem 0.35rem;
+            font-family: "Quicksand", sans-serif;
+            font-size: 0.8rem;
+            border: 1px solid #C9A463;
+            border-radius: 5px;
+            background: #fff;
+        }
+
+        .cp-facemap-text-input:focus { outline: none; }
+
         .cp-facemap-hint { text-align: center; font-size: 0.75rem; color: #a17b7b; margin-top: 0.3rem; }
 
         .cp-sig-block { margin-top: 0.4rem; }
@@ -1849,12 +1877,14 @@
                                 : `<canvas data-facemap="${sec.k}"></canvas>`}
                         </div>
                         ${ro ? '' : `<div class="cp-facemap-tools">
+                            <button type="button" class="cp-tool active" data-tool="draw" title="Draw"><i class="fa-solid fa-pencil"></i></button>
+                            <button type="button" class="cp-tool" data-tool="text" title="Add text"><i class="fa-solid fa-font"></i></button>
                             <button type="button" class="cp-pen active" data-pen="#6B1D1D" style="background:#6B1D1D;" title="Maroon"></button>
                             <button type="button" class="cp-pen" data-pen="#C0392B" style="background:#C0392B;" title="Red"></button>
                             <button type="button" class="cp-pen" data-pen="#2E5FA3" style="background:#2E5FA3;" title="Blue"></button>
                             <button type="button" class="cp-sig-clear" data-sig-clear="${sec.k}">clear</button>
                         </div>
-                        <div class="cp-facemap-hint">Draw with finger or Apple Pencil — mark areas and write amounts.</div>`}
+                        <div class="cp-facemap-hint">Draw with finger or Apple Pencil, or pick the text tool and tap to type amounts.</div>`}
                     </div>`;
                 } else if (sec.t === 'sigs') {
                     html += `<hr class="cp-divider">`;
@@ -1923,7 +1953,7 @@
                 ctx.lineJoin = 'round';
                 ctx.strokeStyle = isFacemap ? '#6B1D1D' : '#3A0D0D';
 
-                const pad = { canvas, ctx, dirty: false, drawing: false };
+                const pad = { canvas, ctx, dirty: false, drawing: false, mode: 'draw', color: ctx.strokeStyle };
                 sigPads[key] = pad;
 
                 function pos(e) {
@@ -1933,9 +1963,15 @@
 
                 canvas.addEventListener('pointerdown', e => {
                     e.preventDefault();
+                    const p = pos(e);
+
+                    if (pad.mode === 'text') {
+                        placeTextInput(pad, p.x, p.y);
+                        return;
+                    }
+
                     canvas.setPointerCapture(e.pointerId);
                     pad.drawing = true;
-                    const p = pos(e);
                     ctx.beginPath();
                     ctx.moveTo(p.x, p.y);
                 });
@@ -1966,11 +2002,65 @@
                     const tools = btn.closest('.cp-facemap-tools');
                     tools.querySelectorAll('[data-pen]').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    const canvas = tools.parentElement.querySelector('canvas[data-facemap]');
-                    const pad = canvas && sigPads[canvas.dataset.facemap];
-                    if (pad) pad.ctx.strokeStyle = btn.dataset.pen;
+                    const pad = padForTools(tools);
+                    if (pad) {
+                        pad.ctx.strokeStyle = btn.dataset.pen;
+                        pad.color = btn.dataset.pen;
+                    }
                 });
             });
+
+            // Face map draw / text tool
+            consentPaper.querySelectorAll('[data-tool]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tools = btn.closest('.cp-facemap-tools');
+                    tools.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const pad = padForTools(tools);
+                    if (pad) pad.mode = btn.dataset.tool;
+                });
+            });
+        }
+
+        function padForTools(tools) {
+            const canvas = tools.parentElement.querySelector('canvas[data-facemap]');
+            return canvas ? sigPads[canvas.dataset.facemap] : null;
+        }
+
+        // Tap-to-type label on the face chart; committed text is drawn into
+        // the canvas so it saves with the markings as one layer.
+        function placeTextInput(pad, x, y) {
+            const wrap = pad.canvas.parentElement;
+            const existing = wrap.querySelector('.cp-facemap-text-input');
+            if (existing) existing.blur();
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'cp-facemap-text-input';
+            input.style.left = x + 'px';
+            input.style.top = y + 'px';
+            wrap.appendChild(input);
+            input.focus();
+
+            let done = false;
+            function commit() {
+                if (done) return;
+                done = true;
+                const val = input.value.trim();
+                input.remove();
+                if (!val) return;
+                pad.ctx.fillStyle = pad.color;
+                pad.ctx.font = '600 15px Quicksand, sans-serif';
+                pad.ctx.textBaseline = 'middle';
+                pad.ctx.fillText(val, x, y);
+                pad.dirty = true;
+            }
+
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') { e.preventDefault(); commit(); }
+                if (e.key === 'Escape') { done = true; input.remove(); }
+            });
+            input.addEventListener('blur', commit);
         }
 
         function collectConsentData() {
