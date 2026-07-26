@@ -649,7 +649,8 @@
             cursor: pointer;
         }
 
-        .cp-check input {
+        .cp-check input,
+        .cp-yn input {
             appearance: none;
             -webkit-appearance: none;
             width: 24px;
@@ -663,7 +664,8 @@
             position: relative;
         }
 
-        .cp-check input:checked::after {
+        .cp-check input:checked::after,
+        .cp-yn input:checked::after {
             content: '✔';
             color: #6B1D1D;
             font-weight: 700;
@@ -674,6 +676,25 @@
             justify-content: center;
             font-size: 0.95rem;
         }
+
+        /* Medical history Yes/No question rows */
+        .cp-q { padding: 0.7rem 0; border-bottom: 1px solid rgba(201,164,99,0.3); }
+        .cp-q-text { font-size: 0.87rem; margin-bottom: 0.45rem; }
+        .cp-q-controls { display: flex; gap: 1.1rem; align-items: center; flex-wrap: wrap; }
+        .cp-yn { display: flex; gap: 0.4rem; align-items: center; font-size: 0.85rem; cursor: pointer; }
+
+        .cp-q-details {
+            flex: 1;
+            min-width: 180px;
+            border: none;
+            border-bottom: 1.5px solid rgba(58,13,13,0.35);
+            background: transparent;
+            padding: 0.25rem 0.2rem;
+            font-family: "Quicksand", sans-serif;
+            font-size: 0.88rem;
+        }
+
+        .cp-q-details:focus { outline: none; border-bottom-color: #C9A463; }
 
         .cp-sig-block { margin-top: 0.4rem; }
         .cp-sig-label {
@@ -722,8 +743,10 @@
         /* Read-only record view */
         .consent-paper.readonly input,
         .consent-paper.readonly textarea { pointer-events: none; }
-        .consent-paper.readonly .cp-check { cursor: default; }
-        .consent-paper.readonly .cp-check input { pointer-events: none; }
+        .consent-paper.readonly .cp-check,
+        .consent-paper.readonly .cp-yn { cursor: default; }
+        .consent-paper.readonly .cp-check input,
+        .consent-paper.readonly .cp-yn input { pointer-events: none; }
         .consent-paper.readonly .cp-sig-clear { display: none; }
 
         @media print {
@@ -1074,6 +1097,7 @@
                 <button class="btn" style="justify-content:center;" data-template="botox">Botulinum Toxin A</button>
                 <button class="btn" style="justify-content:center;" data-template="filler">HA Dermal Filler</button>
                 <button class="btn" style="justify-content:center;" data-template="hyalase">Hyalase (Filler Dissolving)</button>
+                <button class="btn" style="justify-content:center;" data-template="medical">Medical History</button>
             </div>
             <div class="modal-actions">
                 <button class="btn btn-outline" id="cancel-consent-modal">Cancel</button>
@@ -1573,6 +1597,41 @@
                     { t: 'checks', k: 'consent', items: ['I consent to being treated with Hyalase®'] },
                     { t: 'sigs', mode: 'hyalase' }
                 ]
+            },
+            medical: {
+                shortName: 'Medical History',
+                treatmentName: '',
+                formHeading: 'Medical History',
+                title: 'Medical History',
+                subtitle: 'Please complete the following questionnaire.',
+                sections: [
+                    { t: 'row', fields: [
+                        { k: 'patient_name', label: 'Client Name' },
+                        { k: 'dob', label: 'D.O.B' },
+                        { k: 'sex', label: 'Sex' }
+                    ] },
+                    { t: 'row', fields: [
+                        { k: 'practitioner', label: 'Practitioner' },
+                        { k: 'procedure', label: 'Procedure' },
+                        { k: 'form_date', label: 'Date' }
+                    ] },
+                    { t: 'yesno', k: 'questions', items: [
+                        'Are you currently pregnant, breast feeding or on fertility treatment?',
+                        'Do you suffer from allergies?',
+                        'Have you ever suffered from anaphylaxis as a result?',
+                        'Are you currently receiving any medical treatment?',
+                        'Have you ever had a non-surgical treatment before?',
+                        'Have you ever had a reaction after receiving treatment?',
+                        'Do you suffer from any illnesses? e.g. angina, epilepsy, diabetes, auto immune system, hepatitis, HIV positive?',
+                        'Do you suffer from any cutaneous infection or inflammatory problems? e.g. herpes / acne.',
+                        'Are you currently taking aspirin, steroids or anticoagulants (warfarin)?',
+                        'Have you recently undergone surgery?',
+                        'Do you suffer from high or low blood pressure?',
+                        'Are you prone to bruising?'
+                    ] },
+                    { t: 'info', html: 'A current medical history is important for the practitioner to carry out appropriate treatment procedures. I confirm that the information given is correct.' },
+                    { t: 'sigs', mode: 'medical' }
+                ]
             }
         };
 
@@ -1604,8 +1663,8 @@
             const today = new Date().toLocaleDateString('en-GB');
 
             let html = `<div class="cp-logo"><img src="images/GLOW.png" alt="Glow By Rica"></div>
-                <h3 class="cp-heading">Consent Form</h3>
-                <div class="cp-treatment">${escapeHtml(tpl.treatmentName)}</div>
+                <h3 class="cp-heading">${escapeHtml(tpl.formHeading || 'Consent Form')}</h3>
+                ${tpl.treatmentName ? `<div class="cp-treatment">${escapeHtml(tpl.treatmentName)}</div>` : ''}
                 <div class="cp-ornament">◆</div>
                 <div class="cp-subtitle">${tpl.subtitle}</div>`;
 
@@ -1627,12 +1686,30 @@
                     const saved = d[sec.k] || [];
                     html += sec.items.map((item, i) => `
                         <label class="cp-check"><input type="checkbox" data-cg="${sec.k}" data-ci="${i}" ${saved[i] ? 'checked' : ''}><span>${escapeHtml(item)}</span></label>`).join('');
+                } else if (sec.t === 'yesno') {
+                    const saved = d[sec.k] || [];
+                    html += sec.items.map((q, i) => {
+                        const s = saved[i] || {};
+                        return `<div class="cp-q">
+                            <div class="cp-q-text">${escapeHtml(q)}</div>
+                            <div class="cp-q-controls">
+                                <label class="cp-yn"><input type="checkbox" data-yn="${sec.k}" data-qi="${i}" data-v="yes" ${s.a === 'yes' ? 'checked' : ''}><span>Yes</span></label>
+                                <label class="cp-yn"><input type="checkbox" data-yn="${sec.k}" data-qi="${i}" data-v="no" ${s.a === 'no' ? 'checked' : ''}><span>No</span></label>
+                                <input type="text" class="cp-q-details" data-ynd="${sec.k}" data-qi="${i}" placeholder="Details (if yes)" value="${escapeAttr(s.d || '')}">
+                            </div>
+                        </div>`;
+                    }).join('');
                 } else if (sec.t === 'sigs') {
                     html += `<hr class="cp-divider">`;
-                    html += sigBlockHtml('patient_sig', "Patient's signature", d, ro);
-                    html += `<div class="cp-row" style="margin-top:0.9rem;">${fieldHtml('patient_print', "Patient's print name", d.patient_print)}${fieldHtml('sign_date', 'Date', d.sign_date || (ro ? '' : today), true)}</div>`;
-                    html += sigBlockHtml('practitioner_sig', "Practitioner's signature", d, ro);
-                    html += `<div class="cp-row" style="margin-top:0.9rem;">${fieldHtml('practitioner_print', "Practitioner's print name", d.practitioner_print)}</div>`;
+                    if (sec.mode === 'medical') {
+                        html += sigBlockHtml('patient_sig', 'Signature', d, ro);
+                        html += `<div class="cp-row" style="margin-top:0.9rem;">${fieldHtml('patient_print', 'Name', d.patient_print)}${fieldHtml('sign_date', 'Date', d.sign_date || (ro ? '' : today), true)}</div>`;
+                    } else {
+                        html += sigBlockHtml('patient_sig', "Patient's signature", d, ro);
+                        html += `<div class="cp-row" style="margin-top:0.9rem;">${fieldHtml('patient_print', "Patient's print name", d.patient_print)}${fieldHtml('sign_date', 'Date', d.sign_date || (ro ? '' : today), true)}</div>`;
+                        html += sigBlockHtml('practitioner_sig', "Practitioner's signature", d, ro);
+                        html += `<div class="cp-row" style="margin-top:0.9rem;">${fieldHtml('practitioner_print', "Practitioner's print name", d.practitioner_print)}</div>`;
+                    }
                 }
             });
 
@@ -1644,7 +1721,17 @@
             consentSaveBtn.style.display = ro ? 'none' : 'inline-flex';
             consentFormError.classList.remove('active');
 
-            if (!ro) initSigPads();
+            if (!ro) {
+                initSigPads();
+                // Yes/No pairs behave like radio buttons
+                consentPaper.querySelectorAll('input[data-yn]').forEach(cb => {
+                    cb.addEventListener('change', () => {
+                        if (!cb.checked) return;
+                        consentPaper.querySelectorAll(`input[data-yn="${cb.dataset.yn}"][data-qi="${cb.dataset.qi}"]`)
+                            .forEach(o => { if (o !== cb) o.checked = false; });
+                    });
+                });
+            }
         }
 
         function sigBlockHtml(key, label, d, ro) {
@@ -1720,6 +1807,18 @@
                 const g = el.dataset.cg;
                 if (!data[g]) data[g] = [];
                 data[g][Number(el.dataset.ci)] = el.checked;
+            });
+            consentPaper.querySelectorAll('input[data-yn]').forEach(el => {
+                const k = el.dataset.yn, i = Number(el.dataset.qi);
+                if (!data[k]) data[k] = [];
+                if (!data[k][i]) data[k][i] = { a: null, d: '' };
+                if (el.checked) data[k][i].a = el.dataset.v;
+            });
+            consentPaper.querySelectorAll('input[data-ynd]').forEach(el => {
+                const k = el.dataset.ynd, i = Number(el.dataset.qi);
+                if (!data[k]) data[k] = [];
+                if (!data[k][i]) data[k][i] = { a: null, d: '' };
+                data[k][i].d = el.value.trim();
             });
             Object.entries(sigPads).forEach(([key, pad]) => {
                 if (pad.dirty) data[key] = pad.canvas.toDataURL('image/png');
