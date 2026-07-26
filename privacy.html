@@ -14,6 +14,22 @@
             background-color: #FAF3EB;
             color: #3A0D0D;
             line-height: 1.6;
+            position: relative;
+        }
+
+        /* Rica's leaflet marble, anchored to the page (same recipe as index) */
+        body::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            background: url('images/marble.jpg') top center / 100% auto repeat-y;
+            filter: sepia(0.25) brightness(0.97);
+        }
+
+        @media (max-width: 900px) {
+            body::before { background-size: 260% auto; }
         }
 
         h1, h2, h3 { font-family: 'Raleway', sans-serif; }

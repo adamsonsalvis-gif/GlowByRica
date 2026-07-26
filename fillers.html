@@ -15,6 +15,22 @@
             background-color: #FAF3EB;
             color: #3A0D0D;
             line-height: 1.6;
+            position: relative;
+        }
+
+        /* Rica's leaflet marble, anchored to the page (same recipe as index) */
+        body::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            background: url('images/marble.jpg') top center / 100% auto repeat-y;
+            filter: sepia(0.25) brightness(0.97);
+        }
+
+        @media (max-width: 900px) {
+            body::before { background-size: 260% auto; }
         }
 
         h1, h2, h3, h4 { font-family: 'Raleway', sans-serif; }
@@ -170,7 +186,7 @@
 
         /* Page Hero */
         .page-hero {
-            background: linear-gradient(135deg, #FAF3EB 0%, #E9D3C2 100%);
+            background: linear-gradient(135deg, rgba(250,243,235,0.5) 0%, rgba(233,211,194,0.5) 100%);
             padding: 3rem 2rem;
             border-bottom: 3px solid #C9A463;
             text-align: center;
