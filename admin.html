@@ -1925,6 +1925,7 @@
                             <button type="button" class="cp-pen active" data-pen="#6B1D1D" style="background:#6B1D1D;" title="Maroon"></button>
                             <button type="button" class="cp-pen" data-pen="#C0392B" style="background:#C0392B;" title="Red"></button>
                             <button type="button" class="cp-pen" data-pen="#2E5FA3" style="background:#2E5FA3;" title="Blue"></button>
+                            <button type="button" class="cp-tool" data-undo="${sec.k}" title="Undo"><i class="fa-solid fa-rotate-left"></i></button>
                             <button type="button" class="cp-sig-clear" data-sig-clear="${sec.k}">clear</button>
                         </div>
                         <div class="cp-facemap-hint">Draw with finger or Apple Pencil, or pick the text tool and tap to type amounts.</div>`}
@@ -2009,7 +2010,7 @@
                 ctx.lineJoin = 'round';
                 ctx.strokeStyle = isFacemap ? '#6B1D1D' : '#3A0D0D';
 
-                const pad = { canvas, ctx, key, dirty: false, drawing: false, mode: 'draw', color: ctx.strokeStyle, labels: [] };
+                const pad = { canvas, ctx, key, dirty: false, drawing: false, mode: 'draw', color: ctx.strokeStyle, labels: [], history: [] };
                 sigPads[key] = pad;
 
                 function pos(e) {
@@ -2026,6 +2027,7 @@
                         return;
                     }
 
+                    if (isFacemap) pushHistory(pad);
                     canvas.setPointerCapture(e.pointerId);
                     pad.drawing = true;
                     ctx.beginPath();
@@ -2071,6 +2073,14 @@
                 });
             });
 
+            // Face map undo
+            consentPaper.querySelectorAll('[data-undo]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const pad = sigPads[btn.dataset.undo];
+                    if (pad) undoPad(pad);
+                });
+            });
+
             // Face map draw / text tool
             consentPaper.querySelectorAll('[data-tool]').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -2086,6 +2096,50 @@
         function padForTools(tools) {
             const canvas = tools.parentElement.querySelector('canvas[data-facemap]');
             return canvas ? sigPads[canvas.dataset.facemap] : null;
+        }
+
+        // ---- Undo history (strokes + labels share one stack) ----
+        // Snapshot taken before each change, so undo steps back one action
+        // whether it was a pencil stroke, a label, a move or a delete.
+        function pushHistory(pad) {
+            if (!pad.history) return;
+            pad.history.push({
+                img: pad.dirty ? pad.canvas.toDataURL('image/png') : null,
+                dirty: pad.dirty,
+                labels: JSON.parse(JSON.stringify(pad.labels || []))
+            });
+            if (pad.history.length > 25) pad.history.shift();
+        }
+
+        function undoPad(pad) {
+            const snap = pad.history && pad.history.pop();
+            if (!snap) return;
+
+            pad.ctx.save();
+            pad.ctx.setTransform(1, 0, 0, 1, 0, 0);
+            pad.ctx.clearRect(0, 0, pad.canvas.width, pad.canvas.height);
+            if (snap.img) {
+                const img = new Image();
+                img.onload = () => {
+                    pad.ctx.save();
+                    pad.ctx.setTransform(1, 0, 0, 1, 0, 0);
+                    pad.ctx.drawImage(img, 0, 0, pad.canvas.width, pad.canvas.height);
+                    pad.ctx.restore();
+                };
+                img.src = snap.img;
+            }
+            pad.ctx.restore();
+
+            pad.dirty = snap.dirty;
+            pad.labels = snap.labels;
+            renderAllLabels(pad);
+        }
+
+        function renderAllLabels(pad) {
+            const layer = consentPaper.querySelector(`[data-fmlabels="${pad.key}"]`);
+            if (!layer) return;
+            layer.innerHTML = '';
+            pad.labels.forEach(label => renderFaceLabel(pad.key, label, true, pad));
         }
 
         // Tap-to-type label on the face chart. Labels are kept as data
@@ -2112,6 +2166,7 @@
                 input.remove();
                 if (!val) return;
 
+                pushHistory(pad);
                 const label = {
                     x: (x / pad.canvas.offsetWidth) * 100,
                     y: (y / pad.canvas.offsetHeight) * 100,
@@ -2151,26 +2206,42 @@
                 del.title = 'Remove';
                 del.addEventListener('click', e => {
                     e.stopPropagation();
+                    pushHistory(pad);
                     const i = pad.labels.indexOf(label);
                     if (i > -1) pad.labels.splice(i, 1);
                     el.remove();
                 });
                 el.appendChild(del);
-                makeLabelDraggable(el, label, layer);
+                makeLabelDraggable(el, label, layer, pad);
             }
 
             layer.appendChild(el);
         }
 
-        function makeLabelDraggable(el, label, layer) {
+        function makeLabelDraggable(el, label, layer, pad) {
             el.addEventListener('pointerdown', e => {
                 if (e.target.classList.contains('cp-fm-del')) return;
                 e.preventDefault();
                 e.stopPropagation();
                 el.setPointerCapture(e.pointerId);
                 const rect = layer.getBoundingClientRect();
+                let moved = false;
 
                 function move(ev) {
+                    if (!moved) {
+                        moved = true;
+                        // Snapshot the pre-drag position, but only once the
+                        // label really moves -- a tap shouldn't cost an undo.
+                        if (pad) {
+                            const before = pad.labels.map(l => l === label ? { ...l, x: label.x, y: label.y } : l);
+                            pad.history.push({
+                                img: pad.dirty ? pad.canvas.toDataURL('image/png') : null,
+                                dirty: pad.dirty,
+                                labels: JSON.parse(JSON.stringify(before))
+                            });
+                            if (pad.history.length > 25) pad.history.shift();
+                        }
+                    }
                     label.x = Math.max(0, Math.min(100, ((ev.clientX - rect.left) / rect.width) * 100));
                     label.y = Math.max(0, Math.min(100, ((ev.clientY - rect.top) / rect.height) * 100));
                     el.style.left = label.x + '%';
