@@ -31,9 +31,11 @@
             inset: 0;
             z-index: -1;
             pointer-events: none;
-            background:
-                linear-gradient(rgba(250,243,235,0.45), rgba(250,243,235,0.45)),
-                url('images/marble.jpg') center / cover no-repeat;
+            background: url('images/marble.jpg') center / cover no-repeat;
+            /* sepia warms the cool marble into the cream palette;
+               contrast amplifies the veining, which is faint in the
+               middle of the source image */
+            filter: sepia(0.22) contrast(1.45) brightness(0.99);
         }
 
         /* Anchor targets stop below the sticky header instead of under it */
@@ -216,7 +218,7 @@
         .hero {
             /* Translucent so the fixed smoke layer ghosts through while
                keeping the same warm colours */
-            background: linear-gradient(135deg, rgba(250,243,235,0.72) 0%, rgba(233,211,194,0.72) 100%);
+            background: linear-gradient(135deg, rgba(250,243,235,0.5) 0%, rgba(233,211,194,0.5) 100%);
             padding: 0 2rem 0;
             margin-top: -1.5rem;
             border-bottom: 3px solid #C9A463;
@@ -540,7 +542,7 @@
 
         /* About */
         .about {
-            background-color: rgba(233,211,194,0.75);
+            background-color: rgba(233,211,194,0.5);
             padding: 2rem 2rem 0;
             margin: 1rem 0;
             overflow: hidden;
