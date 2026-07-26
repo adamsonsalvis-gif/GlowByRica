@@ -696,6 +696,50 @@
 
         .cp-q-details:focus { outline: none; border-bottom-color: #C9A463; }
 
+        /* Face map drawing (injectable treatment record) */
+        .cp-facemap-wrap { max-width: 420px; margin: 0.5rem auto 1rem; }
+
+        .cp-facemap {
+            position: relative;
+            aspect-ratio: 701 / 878;
+            border: 1px solid rgba(58,13,13,0.15);
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .cp-facemap img { width: 100%; height: 100%; display: block; }
+
+        .cp-facemap canvas,
+        .cp-facemap-overlay {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        .cp-facemap-tools {
+            display: flex;
+            gap: 0.7rem;
+            align-items: center;
+            justify-content: center;
+            margin-top: 0.6rem;
+        }
+
+        .cp-pen {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .cp-pen.active { border-color: #3A0D0D; box-shadow: 0 0 0 2px #FAF3EB inset; }
+
+        .cp-facemap-hint { text-align: center; font-size: 0.75rem; color: #a17b7b; margin-top: 0.3rem; }
+
         .cp-sig-block { margin-top: 0.4rem; }
         .cp-sig-label {
             font-size: 0.72rem;
@@ -1084,6 +1128,7 @@
                                 <div id="client-forms-list"><p class="empty-state">Loading…</p></div>
                                 <div class="consent-actions">
                                     <button class="btn" id="client-attach-medical"><i class="fa-solid fa-notes-medical"></i> Attach Medical History</button>
+                                    <button class="btn" id="client-treatment-record"><i class="fa-solid fa-syringe"></i> Treatment Record</button>
                                     <button class="btn btn-outline" id="client-new-consent"><i class="fa-solid fa-plus"></i> New Consent Form</button>
                                 </div>
                             </div>
@@ -1706,6 +1751,27 @@
                     { t: 'info', html: 'A current medical history is important for the practitioner to carry out appropriate treatment procedures. I confirm that the information given is correct.' },
                     { t: 'sigs', mode: 'medical' }
                 ]
+            },
+            treatment: {
+                shortName: 'Treatment Record',
+                treatmentName: '',
+                formHeading: 'Injectable Treatment Record',
+                title: 'Injectable Treatment Record',
+                subtitle: 'Mark the treated areas and product amounts on the face chart.',
+                requireSigKey: 'practitioner_sig',
+                sections: [
+                    { t: 'row', fields: [
+                        { k: 'patient_name', label: 'Patient Name' },
+                        { k: 'form_date', label: 'Date' }
+                    ] },
+                    { t: 'row', fields: [
+                        { k: 'practitioner', label: 'Practitioner Name' },
+                        { k: 'product', label: 'Product Used' }
+                    ] },
+                    { t: 'facemap', k: 'face_map' },
+                    { t: 'textarea', k: 'notes', label: 'Treatment Notes', hint: 'Areas, units/ml per site, batch numbers, observations.' },
+                    { t: 'sigs', mode: 'practitioner' }
+                ]
             }
         };
 
@@ -1773,11 +1839,31 @@
                             </div>
                         </div>`;
                     }).join('');
+                } else if (sec.t === 'facemap') {
+                    const overlay = d[sec.k];
+                    html += `<div class="cp-facemap-wrap">
+                        <div class="cp-facemap">
+                            <img src="images/face-map.jpg" alt="Face chart">
+                            ${ro
+                                ? (overlay ? `<img class="cp-facemap-overlay" src="${overlay}" alt="markings">` : '')
+                                : `<canvas data-facemap="${sec.k}"></canvas>`}
+                        </div>
+                        ${ro ? '' : `<div class="cp-facemap-tools">
+                            <button type="button" class="cp-pen active" data-pen="#6B1D1D" style="background:#6B1D1D;" title="Maroon"></button>
+                            <button type="button" class="cp-pen" data-pen="#C0392B" style="background:#C0392B;" title="Red"></button>
+                            <button type="button" class="cp-pen" data-pen="#2E5FA3" style="background:#2E5FA3;" title="Blue"></button>
+                            <button type="button" class="cp-sig-clear" data-sig-clear="${sec.k}">clear</button>
+                        </div>
+                        <div class="cp-facemap-hint">Draw with finger or Apple Pencil — mark areas and write amounts.</div>`}
+                    </div>`;
                 } else if (sec.t === 'sigs') {
                     html += `<hr class="cp-divider">`;
                     if (sec.mode === 'medical') {
                         html += sigBlockHtml('patient_sig', 'Signature', d, ro);
                         html += `<div class="cp-row" style="margin-top:0.9rem;">${fieldHtml('patient_print', 'Name', d.patient_print)}${fieldHtml('sign_date', 'Date', d.sign_date || (ro ? '' : today), true)}</div>`;
+                    } else if (sec.mode === 'practitioner') {
+                        html += sigBlockHtml('practitioner_sig', "Practitioner's signature", d, ro);
+                        html += `<div class="cp-row" style="margin-top:0.9rem;">${fieldHtml('practitioner_print', "Practitioner's print name", d.practitioner_print)}${fieldHtml('sign_date', 'Date', d.sign_date || (ro ? '' : today), true)}</div>`;
                     } else {
                         html += sigBlockHtml('patient_sig', "Patient's signature", d, ro);
                         html += `<div class="cp-row" style="margin-top:0.9rem;">${fieldHtml('patient_print', "Patient's print name", d.patient_print)}${fieldHtml('sign_date', 'Date', d.sign_date || (ro ? '' : today), true)}</div>`;
@@ -1824,17 +1910,18 @@
         }
 
         function initSigPads() {
-            consentPaper.querySelectorAll('canvas[data-sig]').forEach(canvas => {
-                const key = canvas.dataset.sig;
+            consentPaper.querySelectorAll('canvas[data-sig], canvas[data-facemap]').forEach(canvas => {
+                const key = canvas.dataset.sig || canvas.dataset.facemap;
+                const isFacemap = !!canvas.dataset.facemap;
                 const dpr = window.devicePixelRatio || 1;
                 canvas.width = canvas.offsetWidth * dpr;
                 canvas.height = canvas.offsetHeight * dpr;
                 const ctx = canvas.getContext('2d');
                 ctx.scale(dpr, dpr);
-                ctx.lineWidth = 2;
+                ctx.lineWidth = isFacemap ? 3 : 2;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                ctx.strokeStyle = '#3A0D0D';
+                ctx.strokeStyle = isFacemap ? '#6B1D1D' : '#3A0D0D';
 
                 const pad = { canvas, ctx, dirty: false, drawing: false };
                 sigPads[key] = pad;
@@ -1870,6 +1957,18 @@
                     if (!pad) return;
                     pad.ctx.clearRect(0, 0, pad.canvas.width, pad.canvas.height);
                     pad.dirty = false;
+                });
+            });
+
+            // Face map pen colours
+            consentPaper.querySelectorAll('[data-pen]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tools = btn.closest('.cp-facemap-tools');
+                    tools.querySelectorAll('[data-pen]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const canvas = tools.parentElement.querySelector('canvas[data-facemap]');
+                    const pad = canvas && sigPads[canvas.dataset.facemap];
+                    if (pad) pad.ctx.strokeStyle = btn.dataset.pen;
                 });
             });
         }
@@ -1949,8 +2048,11 @@
                 consentFormError.classList.add('active');
                 return;
             }
-            if (!data.patient_sig) {
-                consentFormError.textContent = "Please capture the patient's signature.";
+            const sigKey = CONSENT_TEMPLATES[currentTemplateKey].requireSigKey || 'patient_sig';
+            if (!data[sigKey]) {
+                consentFormError.textContent = sigKey === 'practitioner_sig'
+                    ? "Please capture the practitioner's signature."
+                    : "Please capture the patient's signature.";
                 consentFormError.classList.add('active');
                 return;
             }
@@ -2099,6 +2201,13 @@
 
         document.getElementById('client-attach-medical').addEventListener('click', () => {
             openConsentForm('medical', {
+                patient_name: currentClientName,
+                form_date: new Date().toLocaleDateString('en-GB')
+            }, 'clients');
+        });
+
+        document.getElementById('client-treatment-record').addEventListener('click', () => {
+            openConsentForm('treatment', {
                 patient_name: currentClientName,
                 form_date: new Date().toLocaleDateString('en-GB')
             }, 'clients');
