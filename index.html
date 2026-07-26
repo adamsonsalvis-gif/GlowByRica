@@ -19,19 +19,18 @@
             background-color: #FAF3EB;
             color: #3A0D0D;
             line-height: 1.6;
+            position: relative;
         }
 
-        /* Rica's actual leaflet marble as a single fixed viewport-sized
-           layer (no tiling, no seams; content scrolls over it). A soft
-           warm wash on top blends the cool white marble into the site's
-           cream palette. */
+        /* Rica's leaflet marble, anchored to the page so it scrolls with
+           the content: full-width, repeating down the document. */
         body::before {
             content: '';
-            position: fixed;
+            position: absolute;
             inset: 0;
             z-index: -1;
             pointer-events: none;
-            background: url('images/marble.jpg') center / cover no-repeat;
+            background: url('images/marble.jpg') top center / 100% auto repeat-y;
             /* sepia warms the cool marble into the cream palette. No
                contrast: on a near-white image it clips the pale veins
                to pure white and erases the texture. */
