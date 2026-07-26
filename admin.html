@@ -500,6 +500,158 @@
 
         .coming-soon i { font-size: 2rem; color: #C9A463; margin-bottom: 1rem; display: block; }
 
+        /* ---------- Consent form paper ---------- */
+        .consent-paper {
+            background: #fff;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 24px rgba(58,13,13,0.07);
+            border: 1px solid rgba(58,13,13,0.06);
+            max-width: 840px;
+        }
+
+        .consent-paper h3.cp-heading {
+            font-family: "Cinzel", serif;
+            text-align: center;
+            font-size: 1.15rem;
+            color: #6B1D1D;
+            margin-bottom: 0.3rem;
+        }
+
+        .consent-paper .cp-subtitle {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #6B1D1D;
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+
+        .cp-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+        .cp-field { flex: 1; min-width: 220px; }
+
+        .cp-field label,
+        .cp-textarea label {
+            display: block;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6B1D1D;
+            margin-bottom: 0.25rem;
+        }
+
+        .cp-field input,
+        .cp-textarea textarea {
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            border-radius: 8px;
+            border: 1px solid rgba(58,13,13,0.2);
+            font-family: "Quicksand", sans-serif;
+            font-size: 0.95rem;
+            background: #fff;
+        }
+
+        .cp-textarea { margin-bottom: 0.9rem; }
+        .cp-textarea textarea { min-height: 90px; resize: vertical; }
+        .cp-hint { font-size: 0.72rem; color: #a17b7b; font-style: italic; margin-top: 0.2rem; }
+
+        .cp-info {
+            background: #FAF3EB;
+            border-left: 3px solid #C9A463;
+            border-radius: 0 8px 8px 0;
+            padding: 0.9rem 1rem;
+            font-size: 0.84rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .cp-info h4 { font-family: "Cinzel", serif; font-size: 0.85rem; margin-bottom: 0.4rem; color: #3A0D0D; }
+        .cp-info ul { margin: 0.3rem 0 0.3rem 1.2rem; }
+
+        .cp-check-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #3A0D0D;
+            margin: 1.1rem 0 0.4rem;
+        }
+
+        .cp-check {
+            display: flex;
+            gap: 0.7rem;
+            align-items: flex-start;
+            margin: 0.55rem 0;
+            font-size: 0.86rem;
+            line-height: 1.55;
+            cursor: pointer;
+        }
+
+        .cp-check input {
+            width: 22px;
+            height: 22px;
+            accent-color: #6B1D1D;
+            flex-shrink: 0;
+            margin-top: 1px;
+            cursor: pointer;
+        }
+
+        .cp-sig-block { margin-top: 0.4rem; }
+        .cp-sig-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6B1D1D;
+            margin-bottom: 0.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cp-sig-clear {
+            background: none;
+            border: none;
+            color: #a17b7b;
+            font-size: 0.7rem;
+            cursor: pointer;
+            text-decoration: underline;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .cp-sig-pad {
+            border: 1px dashed #C9A463;
+            border-radius: 8px;
+            background: #fff;
+            touch-action: none;
+            width: 100%;
+            height: 120px;
+            display: block;
+        }
+
+        .cp-sig-img { border: 1px solid rgba(58,13,13,0.15); border-radius: 8px; max-height: 120px; }
+
+        .cp-divider { border: none; border-top: 1px solid rgba(201,164,99,0.35); margin: 1.4rem 0; }
+
+        .consent-actions {
+            display: flex;
+            gap: 0.8rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* Read-only record view */
+        .consent-paper.readonly input,
+        .consent-paper.readonly textarea { background: #FAF3EB; pointer-events: none; }
+        .consent-paper.readonly .cp-check { cursor: default; }
+        .consent-paper.readonly .cp-check input { pointer-events: none; }
+        .consent-paper.readonly .cp-sig-clear { display: none; }
+
+        @media print {
+            .sidebar, .mobile-topbar, .topbar, .consent-actions, .sidebar-overlay { display: none !important; }
+            .main-content { padding: 0 !important; max-width: none !important; }
+            #admin-shell.active { display: block !important; }
+            .consent-paper { box-shadow: none; border: none; max-width: none; padding: 0; }
+            body { background: #fff; }
+        }
+
         /* ---------- Modal ---------- */
         .modal-overlay {
             display: none;
@@ -690,7 +842,7 @@
                         <div class="stat-card">
                             <i class="fa-solid fa-file-signature"></i>
                             <div class="stat-number" id="stat-pending-consent">—</div>
-                            <div class="stat-label">Consent Forms Pending</div>
+                            <div class="stat-label">Consent Forms Signed</div>
                         </div>
                         <div class="stat-card">
                             <i class="fa-solid fa-user-plus"></i>
@@ -761,50 +913,36 @@
 
                 <!-- Consent Forms -->
                 <section class="view" id="view-consent">
-                    <div class="topbar">
-                        <h2>Consent Forms</h2>
-                        <button class="btn" id="open-consent-modal"><i class="fa-solid fa-plus"></i> New Submission</button>
+                    <div id="consent-list-panel">
+                        <div class="topbar">
+                            <h2>Consent Forms</h2>
+                            <button class="btn" id="open-consent-modal"><i class="fa-solid fa-plus"></i> New Consent Form</button>
+                        </div>
+
+                        <div class="table-card">
+                            <h3>Completed Forms</h3>
+                            <table>
+                                <thead>
+                                    <tr><th>Client</th><th>Form</th><th>Date</th><th></th></tr>
+                                </thead>
+                                <tbody id="consent-records-tbody">
+                                    <tr><td colspan="4" class="empty-state">Loading…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
-                    <div class="table-card">
-                        <h3>Templates</h3>
-                        <table>
-                            <thead>
-                                <tr><th>Form Name</th><th>Treatment</th><th>Last Updated</th><th></th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Anti-Wrinkle Consent</td>
-                                    <td>Botox</td>
-                                    <td>12 Jun 2026</td>
-                                    <td><button class="icon-btn"><i class="fa-solid fa-eye"></i></button><button class="icon-btn"><i class="fa-solid fa-pen"></i></button></td>
-                                </tr>
-                                <tr>
-                                    <td>Dermal Filler Consent</td>
-                                    <td>Fillers</td>
-                                    <td>2 Jun 2026</td>
-                                    <td><button class="icon-btn"><i class="fa-solid fa-eye"></i></button><button class="icon-btn"><i class="fa-solid fa-pen"></i></button></td>
-                                </tr>
-                                <tr>
-                                    <td>Skincare Treatment Consent</td>
-                                    <td>Skincare</td>
-                                    <td>28 May 2026</td>
-                                    <td><button class="icon-btn"><i class="fa-solid fa-eye"></i></button><button class="icon-btn"><i class="fa-solid fa-pen"></i></button></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="table-card">
-                        <h3>Client Submissions</h3>
-                        <table>
-                            <thead>
-                                <tr><th>Client</th><th>Form</th><th>Submitted</th><th>Status</th></tr>
-                            </thead>
-                            <tbody id="consent-submissions-tbody">
-                                <tr><td colspan="4" class="empty-state">Loading…</td></tr>
-                            </tbody>
-                        </table>
+                    <div id="consent-form-panel" style="display:none;">
+                        <div class="topbar">
+                            <h2 id="consent-form-heading">Consent Form</h2>
+                            <button class="btn btn-outline" id="consent-back-btn"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                        </div>
+                        <div class="consent-paper" id="consent-paper"></div>
+                        <div class="consent-actions" id="consent-form-actions">
+                            <button class="btn" id="consent-save-btn"><i class="fa-solid fa-floppy-disk"></i> Save Form</button>
+                            <button class="btn btn-outline" id="consent-print-btn"><i class="fa-solid fa-print"></i> Print / PDF</button>
+                        </div>
+                        <p class="modal-error" id="consent-form-error" style="margin-top:0.8rem;"></p>
                     </div>
                 </section>
 
@@ -845,28 +983,18 @@
         </div>
     </div>
 
-    <!-- New Consent Submission modal -->
+    <!-- Consent template chooser -->
     <div class="modal-overlay" id="consent-modal-overlay">
         <div class="modal-card">
-            <h3>New Consent Submission</h3>
-            <p class="modal-error" id="consent-error"></p>
-            <label>Client Name</label>
-            <input type="text" id="consent-client-name">
-            <label>Form Template</label>
-            <select id="consent-template">
-                <option>Anti-Wrinkle Consent</option>
-                <option>Dermal Filler Consent</option>
-                <option>Skincare Treatment Consent</option>
-            </select>
-            <label>Status</label>
-            <select id="consent-status">
-                <option value="pending">Pending</option>
-                <option value="signed">Signed</option>
-                <option value="expired">Expired</option>
-            </select>
+            <h3>New Consent Form</h3>
+            <p style="font-size:0.8rem; color:#6B1D1D; margin-bottom:1rem;">Choose the treatment:</p>
+            <div style="display:flex; flex-direction:column; gap:0.6rem;">
+                <button class="btn" style="justify-content:center;" data-template="botox">Botulinum Toxin A</button>
+                <button class="btn" style="justify-content:center;" data-template="filler">HA Dermal Filler</button>
+                <button class="btn" style="justify-content:center;" data-template="hyalase">Hyalase (Filler Dissolving)</button>
+            </div>
             <div class="modal-actions">
                 <button class="btn btn-outline" id="cancel-consent-modal">Cancel</button>
-                <button class="btn" id="save-consent">Save</button>
             </div>
         </div>
     </div>
@@ -983,22 +1111,22 @@
 
         async function loadAllData() {
             document.getElementById('dashboard-date').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-            await Promise.all([loadDashboard(), loadAgenda(), loadConsentSubmissions(), renderCalendar()]);
+            await Promise.all([loadDashboard(), loadAgenda(), loadConsentRecords(), renderCalendar()]);
         }
 
         async function loadDashboard() {
             const today = todayISO();
             const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-            const [todayApptsRes, pendingConsentRes, weekApptsRes] = await Promise.all([
+            const [todayApptsRes, consentCountRes, weekApptsRes] = await Promise.all([
                 supabaseClient.from('appointments').select('*').eq('appointment_date', today).order('appointment_time'),
-                supabaseClient.from('consent_forms').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+                supabaseClient.from('consent_records').select('id', { count: 'exact', head: true }),
                 supabaseClient.from('appointments').select('client_name').gte('created_at', weekAgo)
             ]);
 
             const todayAppts = todayApptsRes.data || [];
             document.getElementById('stat-today-appts').textContent = todayAppts.length;
-            document.getElementById('stat-pending-consent').textContent = pendingConsentRes.count ?? '0';
+            document.getElementById('stat-pending-consent').textContent = consentCountRes.count ?? '0';
 
             const uniqueClients = new Set((weekApptsRes.data || []).map(a => a.client_name));
             document.getElementById('stat-new-clients').textContent = uniqueClients.size;
@@ -1016,8 +1144,8 @@
                 : '<p class="empty-state">No appointments booked for today.</p>';
 
             const { data: recentConsent } = await supabaseClient
-                .from('consent_forms')
-                .select('*')
+                .from('consent_records')
+                .select('id, client_name, template_key, created_at')
                 .order('created_at', { ascending: false })
                 .limit(3);
 
@@ -1025,8 +1153,8 @@
             recentEl.innerHTML = (recentConsent && recentConsent.length)
                 ? recentConsent.map(c => `
                     <div class="list-row">
-                        <div><strong>${escapeHtml(c.client_name)}</strong><div class="meta">${escapeHtml(c.template_name)}</div></div>
-                        <span class="status-pill ${statusPillClass[c.status] || 'status-pending'}">${statusLabel[c.status] || c.status}</span>
+                        <div><strong>${escapeHtml(c.client_name)}</strong><div class="meta">${CONSENT_TEMPLATES[c.template_key] ? CONSENT_TEMPLATES[c.template_key].shortName : c.template_key}</div></div>
+                        <span class="status-pill status-signed">Signed</span>
                     </div>`).join('')
                 : '<p class="empty-state">No consent forms yet.</p>';
         }
@@ -1178,22 +1306,26 @@
             renderCalendar();
         });
 
-        async function loadConsentSubmissions() {
+        async function loadConsentRecords() {
             const { data } = await supabaseClient
-                .from('consent_forms')
-                .select('*')
+                .from('consent_records')
+                .select('id, client_name, template_key, created_at')
                 .order('created_at', { ascending: false });
 
-            const tbody = document.getElementById('consent-submissions-tbody');
+            const tbody = document.getElementById('consent-records-tbody');
             tbody.innerHTML = (data && data.length)
                 ? data.map(c => `
                     <tr>
                         <td>${escapeHtml(c.client_name)}</td>
-                        <td>${escapeHtml(c.template_name)}</td>
-                        <td>${c.submitted_at ? formatDate(c.submitted_at.slice(0, 10)) : '—'}</td>
-                        <td><span class="status-pill ${statusPillClass[c.status] || 'status-pending'}">${statusLabel[c.status] || c.status}</span></td>
+                        <td>${CONSENT_TEMPLATES[c.template_key] ? CONSENT_TEMPLATES[c.template_key].shortName : escapeHtml(c.template_key)}</td>
+                        <td>${formatDate(c.created_at.slice(0, 10))}</td>
+                        <td><button class="icon-btn" data-record-id="${c.id}" title="View"><i class="fa-solid fa-eye"></i></button></td>
                     </tr>`).join('')
                 : '<tr><td colspan="4" class="empty-state">No consent forms yet.</td></tr>';
+
+            tbody.querySelectorAll('[data-record-id]').forEach(btn => {
+                btn.addEventListener('click', () => viewConsentRecord(btn.dataset.recordId));
+            });
         }
 
         function escapeHtml(str) {
@@ -1248,7 +1380,321 @@
             renderCalendar();
         });
 
-        // ---------- New Consent Submission modal ----------
+        // ==================== Consent form engine ====================
+        // Templates transcribed from Rica's Canva consent forms.
+
+        const SHARED_DECLARATIONS = [
+            "I understand that though complications are uncommon, they do sometimes occur. It is possible that side effects not described may occur and indeed that a complication not previously reported may occur for the first time.",
+            "I understand if I suffer any adverse reactions that are not expected, or concern me, I must contact the clinic. An appointment will be made for me to be seen. The clinic cannot take responsibility for complications or results that have not been reported, assessed, documented and managed in a timely fashion.",
+            "I understand that whilst results desired and expected have been discussed, outcomes vary between individuals and cannot be guaranteed.",
+            "I confirm that the medical health history form has been completed truthfully and I am fully aware that withholding medical information, including history of previous treatment, may be detrimental to the safe and optimal outcome of any treatment administered. If there are any changes in my medical history, I must inform the practitioner.",
+            "I confirm that I have been provided with verbal and written information about this treatment which includes aftercare and follow up advice.",
+            "I agree to follow the aftercare advice and understand this reduces risk of adverse reactions and helps ensure optimum results.",
+            "I understand information about me will be treated as confidential and access to it restricted in accordance with the Data Protection Act, unless specific permissions given.",
+            "I consent to my medical records being shared with appropriate medical professionals",
+            "I understand photographs are taken as part of my medical record."
+        ];
+
+        const PHOTO_CONSENTS = [
+            "Educational and training purposes with medical professionals",
+            "Educational purposes with selected patients during consultation",
+            "Educational/promotional purposes in the clinic's portfolio viewed by selected members of the public",
+            "Educational/promotional purposes on the clinic website",
+            "Educational purposes for selected public events"
+        ];
+
+        const PHOTO_TERMS = [
+            "I understand that no fee is payable to me or any other person in respect of the material either now or at any time in the future.",
+            "I confirm that the purpose for which the material would be used has been explained to me in terms which I have understood."
+        ];
+
+        function acceptanceText(treatmentPhrase) {
+            return "I accept the clinic terms and conditions. I am satisfied that treatment with " + treatmentPhrase +
+                " has been explained comprehensively and that the possible risks and side effects associated with the treatment" +
+                " have been fully discussed and understood. I have taken sufficient time to process and consider the information" +
+                " provided and any questions I had, have been answered to my satisfaction, before making a decision to proceed" +
+                " with the agreed treatment plan.";
+        }
+
+        const CONSENT_TEMPLATES = {
+            botox: {
+                shortName: 'Botulinum Toxin A',
+                title: 'Consent Form — Botulinum Toxin A',
+                subtitle: 'Botulinum Toxin Informed Consent (Upper Face)',
+                sections: [
+                    { t: 'patient' },
+                    { t: 'info', title: 'Aim of Treatment', html: 'The aim of this treatment is to significantly reduce the movement of the muscles causing expression lines, thus improving the appearance of such lines.' },
+                    { t: 'input', k: 'brand', label: 'This clinic uses (brand)' },
+                    { t: 'textarea', k: 'goals', label: 'Patient Goals' },
+                    { t: 'textarea', k: 'motivations', label: 'Motivations and Expectations' },
+                    { t: 'textarea', k: 'alternatives', label: 'Alternative treatments advised' },
+                    { t: 'textarea', k: 'material', label: 'Material Information', hint: "Issues or concerns the patient has and how they have been addressed. It may be that 'No additional material information disclosed or identified'." },
+                    { t: 'info', title: 'Common side effects associated with treatment with botulinum toxin to the upper face (1%–10% risk)', html: '<ul><li>Eye lid ptosis (a drooping or heaviness of the eyelid, one or both), brow ptosis (heaviness and or lowering of the brow).</li><li>Facial pain</li></ul>' },
+                    { t: 'info', title: 'Uncommon side effects (0.1%–1% risk)', html: '<ul><li>Swelling/puffiness around the eyes</li><li>Nausea</li><li>Anxiety</li><li>Dry mouth</li><li>Altered skin sensation, muscle twitching or spasm in the treated area</li><li>Eye pain, dry eyes, tearing, sensitivity to light, blurred vision, strabismus</li><li>Flu like symptoms</li><li>Itching or dry skin</li><li>Muscles not targeted may be effected</li><li>Infection</li></ul><strong>Also reported:</strong><ul><li>Fever</li><li>Tinnitus, vertigo</li><li>Alopecia</li><li>Rash</li></ul><em>*This list is not exhaustive, you may ask for a copy of the patient information leaflet in the pack, or check the Summary of Product Characteristics on-line.</em>' },
+                    { t: 'info', html: 'Any adverse reactions usually occur within a few days of treatment. Botulinum toxin effects are not reversible. They are expected to be temporary in nature and usually resolve spontaneously within weeks. Rarely, symptoms may persist for several months.<br><br>The treatment of the brow, and any area other than frown or crows feet with botulinum toxin are not licensed indications. The product manufacturer has no liability should a complication arise, when this medicine is used for indications that have not been licensed.' },
+                    { t: 'info', title: 'Expected Outcome', html: 'Successful treatment should prevent or significantly reduce the expressions causing the lines. Treatment may not cause the expression lines themselves to disappear completely. The expression may not be completely frozen, particularly if extreme effort is exerted to make any expression. Any decision to increase the dose, or repeat treatment, will be made at the discretion of the practitioner, informed by safety and best practice.' },
+                    { t: 'checks', k: 'declarations', items: SHARED_DECLARATIONS },
+                    { t: 'checktitle', text: 'On occasion it is helpful to share visual images of our own treatment results. I consent to photographs being published for:' },
+                    { t: 'checks', k: 'photo_consents', items: PHOTO_CONSENTS },
+                    { t: 'checks', k: 'photo_terms', items: PHOTO_TERMS },
+                    { t: 'checktitle', text: 'I have taken the time to read:' },
+                    { t: 'checks', k: 'read_confirm', items: ['Botulinum Toxin Consent Form', 'Treatment Information Botulinum Toxin', 'Clinic Terms and Conditions'] },
+                    { t: 'info', html: acceptanceText('botulinum toxin') },
+                    { t: 'input', k: 'cost', label: 'I have been advised the cost of the treatment will be (£)', half: true },
+                    { t: 'sigs', mode: 'full' }
+                ]
+            },
+            filler: {
+                shortName: 'HA Dermal Filler',
+                title: 'Consent Form — HA Dermal Filler',
+                subtitle: 'Temporary Dermal Fillers Consent Form — Hyaluronic Acid (Face)',
+                sections: [
+                    { t: 'patient' },
+                    { t: 'info', title: 'Aim of Treatment', html: 'The aim of this treatment is to restore volume, enhance facial contours, improve symmetry, and soften the appearance of lines and folds, while maintaining a natural result. Outcomes vary between individuals and cannot be guaranteed.' },
+                    { t: 'input', k: 'brand', label: 'This treatment uses (product, as agreed by patient and practitioner)' },
+                    { t: 'textarea', k: 'goals', label: 'Patient Goals' },
+                    { t: 'textarea', k: 'motivations', label: 'Motivations and Expectations' },
+                    { t: 'textarea', k: 'alternatives', label: 'Alternative treatments advised' },
+                    { t: 'textarea', k: 'material', label: 'Material Information', hint: "Issues or concerns the patient has and how they have been addressed. It may be that 'No additional material information disclosed or identified'." },
+                    { t: 'info', title: 'Common Side Effects Associated with the Injection', html: '<ul><li>Pain or stinging sensation when the injection is performed.</li><li>Localized swelling, redness and or tenderness</li><li>Bleeding at the sites of injection</li><li>Bruising. Rarely, bruising may be severe and may persist for several weeks.</li><li>Numbness or itching of the area following injection.</li></ul>Common side effects are expected to resolve spontaneously, within the first few days of treatment. Whilst not expected, it is possible that reactions described may persist for longer than expected and may inhibit your confidence to attend work or social events. You are advised to schedule treatment with this in mind, allowing time for common reactions such as bruising and swelling, to settle.' },
+                    { t: 'info', title: 'Uncommon Side Effects', html: '<ul><li>Infection</li><li>Inflammation</li><li>Skin discoloration</li><li>Infection or skin discoloration may occur within a few days, or weeks to months following treatment.</li><li>Allergic or sensitivity reaction. Symptoms include; itching, rash, red itchy welts, wheezing, asthma symptoms, dizziness or feeling faint. Abscess formation</li><li>Prolonged swelling which may occur early or present after several weeks</li><li>Persistent lumps, nodules or papules</li><li>Acne like formations</li><li>A Foreign body reaction known as ‘granuloma’ presenting as lumps or nodules</li><li>The blood supply to the skin may be interrupted by swelling or inadvertent injection into a vessel, causing pain, skin damage and possible scarring.</li><li>Though extremely rare, transient visual disturbance or permanent blindness has been reported following injectable cosmetic treatment.</li></ul>' },
+                    { t: 'info', html: 'Perfect symmetry is not always achievable.<br><br>Correction is expected to last for a period of 6–12 months. The successful outcome varies by degree and how long it lasts varies from one individual to another and cannot be guaranteed.' },
+                    { t: 'checks', k: 'declarations', items: ['I understand that whilst I have been advised as to a probable result, this should not be interpreted as a guarantee.'].concat(SHARED_DECLARATIONS) },
+                    { t: 'checktitle', text: 'On occasion it is helpful to share visual images of our own treatment results. I consent to photographs being published for:' },
+                    { t: 'checks', k: 'photo_consents', items: PHOTO_CONSENTS },
+                    { t: 'checks', k: 'photo_terms', items: PHOTO_TERMS },
+                    { t: 'checktitle', text: 'I have taken the time to read:' },
+                    { t: 'checks', k: 'read_confirm', items: ['Temporary Dermal Filler (HA) Consent Form', 'Treatment Information: Hyaluronic Acid Dermal Fillers', 'Clinic Terms and Conditions'] },
+                    { t: 'info', html: acceptanceText('dermal fillers') },
+                    { t: 'input', k: 'cost', label: 'I have been advised the cost of the treatment will be (£)', half: true },
+                    { t: 'sigs', mode: 'full' }
+                ]
+            },
+            hyalase: {
+                shortName: 'Hyalase (Dissolving)',
+                title: 'Consent Form — Hyalase®',
+                subtitle: 'Hyalase® to dissolve hyaluronic acid dermal fillers',
+                sections: [
+                    { t: 'patient' },
+                    { t: 'info', html: 'Hyaluronic acid (HA) fillers are sterile gels consisting of non-animal stabilised hyaluronic acid for injection into the skin to correct facial lines, wrinkles and folds, for lip enhancement and for shaping facial contours. Occasionally these fillers need to be dissolved when the aesthetic treatment has not produced the desired outcome or there is a possibility of vascular occlusion or impending necrosis (tissue death) which could lead to compromise of healthy tissue.' },
+                    { t: 'info', html: 'Hyalase® (hyaluronidase 1500 units) has an off-license use in aesthetic medicine and except in the case of emergency administration requires the patient to undergo a skin patch test at least sixty minutes prior to the procedure being undertaken. The skin patch test is carried out by injecting Hyalase® into the subcutaneous tissue of the forearm and observed for signs of reaction (i.e. hives or wheals). If a positive patch test result is observed, treatment with Hyalase® cannot be carried out. Erythema or redness and slight vasodilation may be expected.' },
+                    { t: 'info', html: 'Hyalase® is an enzyme which breaks down hyaluronic acid fillers, but it can also break down naturally occurring hyaluronic acid present in the body, the results can be unpredictable and the effect dramatic. I understand that there will be loss of volume and there can be some skin laxity which in itself may not provide a good aesthetic result. Although some of the effects can be immediate, I understand that it can take up to 14 days for the final results to be seen and the treatment may need to be repeated.<br><br>Hyalase® administration can result in anaphylaxis (a severe allergic reaction which in itself is life threatening and requires immediate medical attention) and I understand this and have been given full counselling and the opportunity to discuss the treatment with Hyalase®, conservative treatment options or leaving the dermal filler to break down naturally which may take several months dependent on the type of filler used and the area treated.' },
+                    { t: 'info', html: 'The use of and the indications for the administration of Hyalase® have been explained to me by my practitioner and I have had the opportunity to have all questions answered to my satisfaction. After the treatment some other common injection-related reactions might occur. These reactions include redness, swelling, pain, itching, bruising and tenderness at the injection site. They have generally been described as mild to moderate and typically resolve spontaneously a few days after injection. Bruising may occasionally be more significant.' },
+                    { t: 'row', fields: [
+                        { k: 'observe_minutes', label: 'I will remain at the clinic for (minutes) after the procedure for observation' },
+                        { k: 'return_after', label: 'I may need to return to the clinic after (days/weeks) for assessment' }
+                    ] },
+                    { t: 'info', html: 'I have answered the questions regarding my medical history to the best of my knowledge. I have also received the aftercare information and its contents have been explained to me and I will follow the advice given.' },
+                    { t: 'checks', k: 'consent', items: ['I consent to being treated with Hyalase®'] },
+                    { t: 'sigs', mode: 'hyalase' }
+                ]
+            }
+        };
+
+        const consentListPanel = document.getElementById('consent-list-panel');
+        const consentFormPanel = document.getElementById('consent-form-panel');
+        const consentPaper = document.getElementById('consent-paper');
+        const consentSaveBtn = document.getElementById('consent-save-btn');
+        const consentFormError = document.getElementById('consent-form-error');
+        let currentTemplateKey = null;
+        let sigPads = {};
+
+        function escapeAttr(str) {
+            return escapeHtml(str).replace(/"/g, '&quot;');
+        }
+
+        function fieldHtml(k, label, value, half) {
+            return `<div class="cp-field" ${half ? 'style="max-width:280px;"' : ''}>
+                <label>${escapeHtml(label)}</label>
+                <input type="text" data-ck="${k}" value="${escapeAttr(value || '')}">
+            </div>`;
+        }
+
+        function renderConsentForm(key, record) {
+            const tpl = CONSENT_TEMPLATES[key];
+            const d = record ? (record.data || {}) : {};
+            currentTemplateKey = key;
+            sigPads = {};
+            const ro = !!record;
+            const today = new Date().toLocaleDateString('en-GB');
+
+            let html = `<h3 class="cp-heading">${tpl.title}</h3><div class="cp-subtitle">${tpl.subtitle}</div>`;
+
+            tpl.sections.forEach(sec => {
+                if (sec.t === 'patient') {
+                    html += `<div class="cp-row">${fieldHtml('patient_name', 'Patient name', d.patient_name)}${fieldHtml('dob', 'Date of Birth', d.dob)}</div>`;
+                    html += `<div class="cp-row">${fieldHtml('email', 'E-mail address', d.email)}${fieldHtml('mobile', 'Mobile number', d.mobile)}</div>`;
+                } else if (sec.t === 'input') {
+                    html += `<div class="cp-row">${fieldHtml(sec.k, sec.label, d[sec.k], sec.half)}</div>`;
+                } else if (sec.t === 'row') {
+                    html += `<div class="cp-row">${sec.fields.map(f => fieldHtml(f.k, f.label, d[f.k])).join('')}</div>`;
+                } else if (sec.t === 'textarea') {
+                    html += `<div class="cp-textarea"><label>${escapeHtml(sec.label)}</label><textarea data-ck="${sec.k}">${escapeHtml(d[sec.k] || '')}</textarea>${sec.hint ? `<div class="cp-hint">${escapeHtml(sec.hint)}</div>` : ''}</div>`;
+                } else if (sec.t === 'info') {
+                    html += `<div class="cp-info">${sec.title ? `<h4>${escapeHtml(sec.title)}</h4>` : ''}${sec.html}</div>`;
+                } else if (sec.t === 'checktitle') {
+                    html += `<div class="cp-check-title">${escapeHtml(sec.text)}</div>`;
+                } else if (sec.t === 'checks') {
+                    const saved = d[sec.k] || [];
+                    html += sec.items.map((item, i) => `
+                        <label class="cp-check"><input type="checkbox" data-cg="${sec.k}" data-ci="${i}" ${saved[i] ? 'checked' : ''}><span>${escapeHtml(item)}</span></label>`).join('');
+                } else if (sec.t === 'sigs') {
+                    html += `<hr class="cp-divider">`;
+                    html += sigBlockHtml('patient_sig', "Patient's signature", d, ro);
+                    html += `<div class="cp-row" style="margin-top:0.9rem;">${fieldHtml('patient_print', "Patient's print name", d.patient_print)}${fieldHtml('sign_date', 'Date', d.sign_date || (ro ? '' : today), true)}</div>`;
+                    html += sigBlockHtml('practitioner_sig', "Practitioner's signature", d, ro);
+                    html += `<div class="cp-row" style="margin-top:0.9rem;">${fieldHtml('practitioner_print', "Practitioner's print name", d.practitioner_print)}</div>`;
+                }
+            });
+
+            consentPaper.innerHTML = html;
+            consentPaper.classList.toggle('readonly', ro);
+            document.getElementById('consent-form-heading').textContent = ro
+                ? `${tpl.shortName} — ${record.client_name}`
+                : `New ${tpl.shortName} Consent`;
+            consentSaveBtn.style.display = ro ? 'none' : 'inline-flex';
+            consentFormError.classList.remove('active');
+
+            if (!ro) initSigPads();
+        }
+
+        function sigBlockHtml(key, label, d, ro) {
+            if (ro) {
+                const img = d[key]
+                    ? `<img class="cp-sig-img" src="${d[key]}" alt="signature">`
+                    : `<div class="cp-hint">Not signed</div>`;
+                return `<div class="cp-sig-block"><div class="cp-sig-label"><span>${escapeHtml(label)}</span></div>${img}</div>`;
+            }
+            return `<div class="cp-sig-block">
+                <div class="cp-sig-label"><span>${escapeHtml(label)}</span>
+                    <button type="button" class="cp-sig-clear" data-sig-clear="${key}">clear</button>
+                </div>
+                <canvas class="cp-sig-pad" data-sig="${key}"></canvas>
+            </div>`;
+        }
+
+        function initSigPads() {
+            consentPaper.querySelectorAll('canvas[data-sig]').forEach(canvas => {
+                const key = canvas.dataset.sig;
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = canvas.offsetWidth * dpr;
+                canvas.height = canvas.offsetHeight * dpr;
+                const ctx = canvas.getContext('2d');
+                ctx.scale(dpr, dpr);
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = '#3A0D0D';
+
+                const pad = { canvas, ctx, dirty: false, drawing: false };
+                sigPads[key] = pad;
+
+                function pos(e) {
+                    const r = canvas.getBoundingClientRect();
+                    return { x: e.clientX - r.left, y: e.clientY - r.top };
+                }
+
+                canvas.addEventListener('pointerdown', e => {
+                    e.preventDefault();
+                    canvas.setPointerCapture(e.pointerId);
+                    pad.drawing = true;
+                    const p = pos(e);
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                });
+                canvas.addEventListener('pointermove', e => {
+                    if (!pad.drawing) return;
+                    e.preventDefault();
+                    const p = pos(e);
+                    ctx.lineTo(p.x, p.y);
+                    ctx.stroke();
+                    pad.dirty = true;
+                });
+                ['pointerup', 'pointercancel'].forEach(ev =>
+                    canvas.addEventListener(ev, () => { pad.drawing = false; }));
+            });
+
+            consentPaper.querySelectorAll('[data-sig-clear]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const pad = sigPads[btn.dataset.sigClear];
+                    if (!pad) return;
+                    pad.ctx.clearRect(0, 0, pad.canvas.width, pad.canvas.height);
+                    pad.dirty = false;
+                });
+            });
+        }
+
+        function collectConsentData() {
+            const data = {};
+            consentPaper.querySelectorAll('[data-ck]').forEach(el => { data[el.dataset.ck] = el.value.trim(); });
+            consentPaper.querySelectorAll('[data-cg]').forEach(el => {
+                const g = el.dataset.cg;
+                if (!data[g]) data[g] = [];
+                data[g][Number(el.dataset.ci)] = el.checked;
+            });
+            Object.entries(sigPads).forEach(([key, pad]) => {
+                if (pad.dirty) data[key] = pad.canvas.toDataURL('image/png');
+            });
+            return data;
+        }
+
+        function showConsentList() {
+            consentFormPanel.style.display = 'none';
+            consentListPanel.style.display = 'block';
+        }
+
+        function openConsentForm(key) {
+            consentListPanel.style.display = 'none';
+            consentFormPanel.style.display = 'block';
+            renderConsentForm(key, null);
+            window.scrollTo(0, 0);
+        }
+
+        async function viewConsentRecord(id) {
+            const { data, error } = await supabaseClient.from('consent_records').select('*').eq('id', id).single();
+            if (error || !data) return;
+            consentListPanel.style.display = 'none';
+            consentFormPanel.style.display = 'block';
+            renderConsentForm(data.template_key, data);
+            window.scrollTo(0, 0);
+        }
+
+        consentSaveBtn.addEventListener('click', async () => {
+            const data = collectConsentData();
+            if (!data.patient_name) {
+                consentFormError.textContent = 'Please enter the patient name.';
+                consentFormError.classList.add('active');
+                return;
+            }
+            if (!data.patient_sig) {
+                consentFormError.textContent = "Please capture the patient's signature.";
+                consentFormError.classList.add('active');
+                return;
+            }
+
+            consentSaveBtn.disabled = true;
+            const { error } = await supabaseClient.from('consent_records').insert({
+                template_key: currentTemplateKey,
+                client_name: data.patient_name,
+                data
+            });
+            consentSaveBtn.disabled = false;
+
+            if (error) {
+                consentFormError.textContent = error.message;
+                consentFormError.classList.add('active');
+                return;
+            }
+
+            showConsentList();
+            loadDashboard();
+            loadConsentRecords();
+        });
+
+        document.getElementById('consent-back-btn').addEventListener('click', showConsentList);
+        document.getElementById('consent-print-btn').addEventListener('click', () => window.print());
+
+        // Template chooser modal
         const consentModal = document.getElementById('consent-modal-overlay');
         document.getElementById('open-consent-modal').addEventListener('click', () => {
             consentModal.classList.add('active');
@@ -1256,35 +1702,11 @@
         document.getElementById('cancel-consent-modal').addEventListener('click', () => {
             consentModal.classList.remove('active');
         });
-
-        document.getElementById('save-consent').addEventListener('click', async () => {
-            const client_name = document.getElementById('consent-client-name').value.trim();
-            const template_name = document.getElementById('consent-template').value;
-            const status = document.getElementById('consent-status').value;
-            const errorEl = document.getElementById('consent-error');
-
-            if (!client_name) {
-                errorEl.textContent = 'Please enter a client name.';
-                errorEl.classList.add('active');
-                return;
-            }
-
-            const { error } = await supabaseClient.from('consent_forms').insert({
-                client_name, template_name, status,
-                submitted_at: status === 'signed' ? new Date().toISOString() : null
+        consentModal.querySelectorAll('[data-template]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                consentModal.classList.remove('active');
+                openConsentForm(btn.dataset.template);
             });
-
-            if (error) {
-                errorEl.textContent = error.message;
-                errorEl.classList.add('active');
-                return;
-            }
-
-            errorEl.classList.remove('active');
-            consentModal.classList.remove('active');
-            document.getElementById('consent-client-name').value = '';
-            loadDashboard();
-            loadConsentSubmissions();
         });
     </script>
 </body>
