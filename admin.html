@@ -500,9 +500,11 @@
 
         .coming-soon i { font-size: 2rem; color: #C9A463; margin-bottom: 1rem; display: block; }
 
-        /* ---------- Consent form paper ---------- */
+        /* ---------- Consent form paper (styled after the Canva forms) ---------- */
         .consent-paper {
-            background: #fff;
+            background:
+                linear-gradient(rgba(255,255,255,0.78), rgba(255,255,255,0.78)),
+                url('images/marble.jpg') center / cover;
             border-radius: 16px;
             padding: 2rem;
             box-shadow: 0 8px 24px rgba(58,13,13,0.07);
@@ -510,13 +512,49 @@
             max-width: 840px;
         }
 
+        .cp-logo { text-align: center; margin-bottom: 0.4rem; }
+        .cp-logo img { width: 130px; }
+
         .consent-paper h3.cp-heading {
             font-family: "Cinzel", serif;
             text-align: center;
-            font-size: 1.15rem;
+            font-size: 1.5rem;
+            font-weight: 700;
             color: #6B1D1D;
-            margin-bottom: 0.3rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 0.1rem;
         }
+
+        .cp-treatment {
+            font-family: "Cinzel", serif;
+            text-align: center;
+            font-size: 1.05rem;
+            color: #C9A463;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 0.6rem;
+        }
+
+        .cp-ornament {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: #C9A463;
+            margin-bottom: 1.4rem;
+            font-size: 0.7rem;
+        }
+
+        .cp-ornament::before,
+        .cp-ornament::after {
+            content: '';
+            height: 1px;
+            width: 90px;
+            background: linear-gradient(90deg, transparent, #C9A463);
+        }
+
+        .cp-ornament::after { background: linear-gradient(90deg, #C9A463, transparent); }
 
         .consent-paper .cp-subtitle {
             text-align: center;
@@ -539,33 +577,60 @@
             margin-bottom: 0.25rem;
         }
 
-        .cp-field input,
-        .cp-textarea textarea {
+        /* Underline-style fields like the printed form */
+        .cp-field input {
             width: 100%;
-            padding: 0.6rem 0.75rem;
-            border-radius: 8px;
-            border: 1px solid rgba(58,13,13,0.2);
+            padding: 0.35rem 0.3rem;
+            border: none;
+            border-bottom: 1.5px solid rgba(58,13,13,0.55);
+            border-radius: 0;
             font-family: "Quicksand", sans-serif;
             font-size: 0.95rem;
-            background: #fff;
+            background: transparent;
         }
 
-        .cp-textarea { margin-bottom: 0.9rem; }
-        .cp-textarea textarea { min-height: 90px; resize: vertical; }
-        .cp-hint { font-size: 0.72rem; color: #a17b7b; font-style: italic; margin-top: 0.2rem; }
+        .cp-field input:focus { outline: none; border-bottom-color: #C9A463; }
+
+        /* Tan rounded panels like the Canva text boxes */
+        .cp-textarea {
+            margin-bottom: 0.9rem;
+            background: #E9D3C2;
+            border-radius: 14px;
+            padding: 0.9rem 1rem;
+        }
+
+        .cp-textarea label {
+            text-transform: none;
+            letter-spacing: 0;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #3A0D0D;
+        }
+
+        .cp-textarea textarea {
+            width: 100%;
+            min-height: 80px;
+            resize: vertical;
+            border: none;
+            background: transparent;
+            font-family: "Quicksand", sans-serif;
+            font-size: 0.95rem;
+        }
+
+        .cp-textarea textarea:focus { outline: none; }
+        .cp-hint { font-size: 0.72rem; color: #8a6a54; font-style: italic; margin-top: 0.2rem; }
 
         .cp-info {
-            background: #FAF3EB;
-            border-left: 3px solid #C9A463;
-            border-radius: 0 8px 8px 0;
-            padding: 0.9rem 1rem;
-            font-size: 0.84rem;
-            line-height: 1.6;
-            margin-bottom: 1rem;
+            padding: 0.4rem 0;
+            font-size: 0.85rem;
+            line-height: 1.65;
+            margin-bottom: 0.8rem;
         }
 
-        .cp-info h4 { font-family: "Cinzel", serif; font-size: 0.85rem; margin-bottom: 0.4rem; color: #3A0D0D; }
-        .cp-info ul { margin: 0.3rem 0 0.3rem 1.2rem; }
+        .cp-info h4 { font-family: "Cinzel", serif; font-size: 0.92rem; margin-bottom: 0.4rem; color: #6B1D1D; }
+        .cp-info ul { list-style: none; margin: 0.4rem 0; }
+        .cp-info li { padding-left: 1.25rem; position: relative; margin: 0.25rem 0; }
+        .cp-info li::before { content: '✦'; color: #C9A463; position: absolute; left: 0; font-size: 0.8rem; }
 
         .cp-check-title {
             font-size: 0.85rem;
@@ -585,12 +650,29 @@
         }
 
         .cp-check input {
-            width: 22px;
-            height: 22px;
-            accent-color: #6B1D1D;
+            appearance: none;
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            background: #E9D3C2;
+            border-radius: 5px;
+            border: none;
             flex-shrink: 0;
             margin-top: 1px;
             cursor: pointer;
+            position: relative;
+        }
+
+        .cp-check input:checked::after {
+            content: '✔';
+            color: #6B1D1D;
+            font-weight: 700;
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
         }
 
         .cp-sig-block { margin-top: 0.4rem; }
@@ -639,7 +721,7 @@
 
         /* Read-only record view */
         .consent-paper.readonly input,
-        .consent-paper.readonly textarea { background: #FAF3EB; pointer-events: none; }
+        .consent-paper.readonly textarea { pointer-events: none; }
         .consent-paper.readonly .cp-check { cursor: default; }
         .consent-paper.readonly .cp-check input { pointer-events: none; }
         .consent-paper.readonly .cp-sig-clear { display: none; }
@@ -1419,6 +1501,7 @@
         const CONSENT_TEMPLATES = {
             botox: {
                 shortName: 'Botulinum Toxin A',
+                treatmentName: 'Botulinum Toxin A',
                 title: 'Consent Form — Botulinum Toxin A',
                 subtitle: 'Botulinum Toxin Informed Consent (Upper Face)',
                 sections: [
@@ -1446,6 +1529,7 @@
             },
             filler: {
                 shortName: 'HA Dermal Filler',
+                treatmentName: 'HA Dermal Filler',
                 title: 'Consent Form — HA Dermal Filler',
                 subtitle: 'Temporary Dermal Fillers Consent Form — Hyaluronic Acid (Face)',
                 sections: [
@@ -1472,6 +1556,7 @@
             },
             hyalase: {
                 shortName: 'Hyalase (Dissolving)',
+                treatmentName: 'Hyalase®',
                 title: 'Consent Form — Hyalase®',
                 subtitle: 'Hyalase® to dissolve hyaluronic acid dermal fillers',
                 sections: [
@@ -1518,7 +1603,11 @@
             const ro = !!record;
             const today = new Date().toLocaleDateString('en-GB');
 
-            let html = `<h3 class="cp-heading">${tpl.title}</h3><div class="cp-subtitle">${tpl.subtitle}</div>`;
+            let html = `<div class="cp-logo"><img src="images/GLOW.png" alt="Glow By Rica"></div>
+                <h3 class="cp-heading">Consent Form</h3>
+                <div class="cp-treatment">${escapeHtml(tpl.treatmentName)}</div>
+                <div class="cp-ornament">◆</div>
+                <div class="cp-subtitle">${tpl.subtitle}</div>`;
 
             tpl.sections.forEach(sec => {
                 if (sec.t === 'patient') {
