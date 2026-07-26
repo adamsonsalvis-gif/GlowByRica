@@ -766,6 +766,48 @@
 
         .cp-facemap-text-input:focus { outline: none; }
 
+        /* Draggable text labels on the face chart */
+        .cp-fm-labels {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 4;
+        }
+
+        .cp-fm-label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            pointer-events: auto;
+            font-family: "Quicksand", sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.05rem 0.25rem;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.75);
+        }
+
+        .cp-fm-label.editable { cursor: grab; touch-action: none; }
+        .cp-fm-label.editable:active { cursor: grabbing; }
+
+        .cp-fm-del {
+            background: none;
+            border: none;
+            color: #b23a3a;
+            cursor: pointer;
+            font-size: 0.7rem;
+            padding: 0 0.1rem;
+            line-height: 1;
+        }
+
+        @media print {
+            .cp-fm-del { display: none !important; }
+            .cp-fm-label { background: none; }
+        }
+
         .cp-facemap-hint { text-align: center; font-size: 0.75rem; color: #a17b7b; margin-top: 0.3rem; }
 
         .cp-sig-block { margin-top: 0.4rem; }
@@ -1875,6 +1917,7 @@
                             ${ro
                                 ? (overlay ? `<img class="cp-facemap-overlay" src="${overlay}" alt="markings">` : '')
                                 : `<canvas data-facemap="${sec.k}"></canvas>`}
+                            <div class="cp-fm-labels" data-fmlabels="${sec.k}"></div>
                         </div>
                         ${ro ? '' : `<div class="cp-facemap-tools">
                             <button type="button" class="cp-tool active" data-tool="draw" title="Draw"><i class="fa-solid fa-pencil"></i></button>
@@ -1911,8 +1954,21 @@
             consentSaveBtn.style.display = ro ? 'none' : 'inline-flex';
             consentFormError.classList.remove('active');
 
-            if (!ro) {
+            if (ro) {
+                // Saved labels render as text over the markings image
+                tpl.sections.filter(s => s.t === 'facemap').forEach(s => {
+                    (d[s.k + '_labels'] || []).forEach(label => renderFaceLabel(s.k, label, false, null));
+                });
+            } else {
                 initSigPads();
+                tpl.sections.filter(s => s.t === 'facemap').forEach(s => {
+                    const pad = sigPads[s.k];
+                    if (!pad) return;
+                    (d[s.k + '_labels'] || []).forEach(label => {
+                        pad.labels.push(label);
+                        renderFaceLabel(s.k, label, true, pad);
+                    });
+                });
                 // Yes/No pairs behave like radio buttons
                 consentPaper.querySelectorAll('input[data-yn]').forEach(cb => {
                     cb.addEventListener('change', () => {
@@ -1953,7 +2009,7 @@
                 ctx.lineJoin = 'round';
                 ctx.strokeStyle = isFacemap ? '#6B1D1D' : '#3A0D0D';
 
-                const pad = { canvas, ctx, dirty: false, drawing: false, mode: 'draw', color: ctx.strokeStyle };
+                const pad = { canvas, ctx, key, dirty: false, drawing: false, mode: 'draw', color: ctx.strokeStyle, labels: [] };
                 sigPads[key] = pad;
 
                 function pos(e) {
@@ -1993,6 +2049,11 @@
                     if (!pad) return;
                     pad.ctx.clearRect(0, 0, pad.canvas.width, pad.canvas.height);
                     pad.dirty = false;
+                    if (pad.labels) {
+                        pad.labels.length = 0;
+                        const layer = consentPaper.querySelector(`[data-fmlabels="${pad.key}"]`);
+                        if (layer) layer.innerHTML = '';
+                    }
                 });
             });
 
@@ -2027,8 +2088,9 @@
             return canvas ? sigPads[canvas.dataset.facemap] : null;
         }
 
-        // Tap-to-type label on the face chart; committed text is drawn into
-        // the canvas so it saves with the markings as one layer.
+        // Tap-to-type label on the face chart. Labels are kept as data
+        // (percentage coords) rather than painted into the canvas, so they
+        // stay draggable and print as crisp text.
         function placeTextInput(pad, x, y) {
             const wrap = pad.canvas.parentElement;
             const existing = wrap.querySelector('.cp-facemap-text-input');
@@ -2049,11 +2111,15 @@
                 const val = input.value.trim();
                 input.remove();
                 if (!val) return;
-                pad.ctx.fillStyle = pad.color;
-                pad.ctx.font = '600 15px Quicksand, sans-serif';
-                pad.ctx.textBaseline = 'middle';
-                pad.ctx.fillText(val, x, y);
-                pad.dirty = true;
+
+                const label = {
+                    x: (x / pad.canvas.offsetWidth) * 100,
+                    y: (y / pad.canvas.offsetHeight) * 100,
+                    text: val,
+                    color: pad.color
+                };
+                pad.labels.push(label);
+                renderFaceLabel(pad.key, label, true, pad);
             }
 
             input.addEventListener('keydown', e => {
@@ -2061,6 +2127,65 @@
                 if (e.key === 'Escape') { done = true; input.remove(); }
             });
             input.addEventListener('blur', commit);
+        }
+
+        function renderFaceLabel(key, label, editable, pad) {
+            const layer = consentPaper.querySelector(`[data-fmlabels="${key}"]`);
+            if (!layer) return;
+
+            const el = document.createElement('div');
+            el.className = 'cp-fm-label' + (editable ? ' editable' : '');
+            el.style.left = label.x + '%';
+            el.style.top = label.y + '%';
+            el.style.color = label.color;
+
+            const span = document.createElement('span');
+            span.textContent = label.text;
+            el.appendChild(span);
+
+            if (editable) {
+                const del = document.createElement('button');
+                del.type = 'button';
+                del.className = 'cp-fm-del';
+                del.innerHTML = '&times;';
+                del.title = 'Remove';
+                del.addEventListener('click', e => {
+                    e.stopPropagation();
+                    const i = pad.labels.indexOf(label);
+                    if (i > -1) pad.labels.splice(i, 1);
+                    el.remove();
+                });
+                el.appendChild(del);
+                makeLabelDraggable(el, label, layer);
+            }
+
+            layer.appendChild(el);
+        }
+
+        function makeLabelDraggable(el, label, layer) {
+            el.addEventListener('pointerdown', e => {
+                if (e.target.classList.contains('cp-fm-del')) return;
+                e.preventDefault();
+                e.stopPropagation();
+                el.setPointerCapture(e.pointerId);
+                const rect = layer.getBoundingClientRect();
+
+                function move(ev) {
+                    label.x = Math.max(0, Math.min(100, ((ev.clientX - rect.left) / rect.width) * 100));
+                    label.y = Math.max(0, Math.min(100, ((ev.clientY - rect.top) / rect.height) * 100));
+                    el.style.left = label.x + '%';
+                    el.style.top = label.y + '%';
+                }
+                function up() {
+                    el.removeEventListener('pointermove', move);
+                    el.removeEventListener('pointerup', up);
+                    el.removeEventListener('pointercancel', up);
+                }
+
+                el.addEventListener('pointermove', move);
+                el.addEventListener('pointerup', up);
+                el.addEventListener('pointercancel', up);
+            });
         }
 
         function collectConsentData() {
@@ -2085,6 +2210,7 @@
             });
             Object.entries(sigPads).forEach(([key, pad]) => {
                 if (pad.dirty) data[key] = pad.canvas.toDataURL('image/png');
+                if (pad.labels && pad.labels.length) data[key + '_labels'] = pad.labels;
             });
             return data;
         }
