@@ -1460,13 +1460,32 @@
                         <td>${escapeHtml(c.client_name)}</td>
                         <td>${CONSENT_TEMPLATES[c.template_key] ? CONSENT_TEMPLATES[c.template_key].shortName : escapeHtml(c.template_key)}</td>
                         <td>${formatDate(c.created_at.slice(0, 10))}</td>
-                        <td><button class="icon-btn" data-record-id="${c.id}" title="View"><i class="fa-solid fa-eye"></i></button></td>
+                        <td>
+                            <button class="icon-btn" data-record-id="${c.id}" title="View"><i class="fa-solid fa-eye"></i></button>
+                            <button class="icon-btn" data-delete-id="${c.id}" data-delete-name="${escapeAttr(c.client_name)}" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                        </td>
                     </tr>`).join('')
                 : '<tr><td colspan="4" class="empty-state">No consent forms yet.</td></tr>';
 
             tbody.querySelectorAll('[data-record-id]').forEach(btn => {
                 btn.addEventListener('click', () => viewConsentRecord(btn.dataset.recordId));
             });
+            tbody.querySelectorAll('[data-delete-id]').forEach(btn => {
+                btn.addEventListener('click', () => deleteConsentRecord(btn.dataset.deleteId, btn.dataset.deleteName));
+            });
+        }
+
+        async function deleteConsentRecord(id, clientName, fromProfile) {
+            if (!confirm(`Delete this form for ${clientName}? This cannot be undone.`)) return;
+            const { error } = await supabaseClient.from('consent_records').delete().eq('id', id);
+            if (error) {
+                alert('Could not delete: ' + error.message);
+                return;
+            }
+            loadDashboard();
+            loadConsentRecords();
+            loadClients();
+            if (fromProfile && currentClientName) openClientProfile(currentClientName);
         }
 
         function escapeHtml(str) {
@@ -2016,12 +2035,18 @@
                 ? forms.map(f => `
                     <div class="list-row">
                         <div><strong>${CONSENT_TEMPLATES[f.template_key] ? CONSENT_TEMPLATES[f.template_key].shortName : escapeHtml(f.template_key)}</strong><div class="meta">${formatDate(f.created_at.slice(0, 10))}</div></div>
-                        <button class="icon-btn" data-form-id="${f.id}" title="View"><i class="fa-solid fa-eye"></i></button>
+                        <div>
+                            <button class="icon-btn" data-form-id="${f.id}" title="View"><i class="fa-solid fa-eye"></i></button>
+                            <button class="icon-btn" data-form-del="${f.id}" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                        </div>
                     </div>`).join('')
                 : '<p class="empty-state">No forms yet.</p>';
 
             formsEl.querySelectorAll('[data-form-id]').forEach(btn => {
                 btn.addEventListener('click', () => viewConsentRecord(btn.dataset.formId, 'clients'));
+            });
+            formsEl.querySelectorAll('[data-form-del]').forEach(btn => {
+                btn.addEventListener('click', () => deleteConsentRecord(btn.dataset.formDel, name, true));
             });
 
             const apptsEl = document.getElementById('client-appts-list');
