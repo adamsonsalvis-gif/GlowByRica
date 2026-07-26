@@ -1236,6 +1236,10 @@
 
             .mobile-logo { display: none !important; }
 
+            /* Oversize the marble on narrow screens so it repeats far
+               less often -- the joins were faintly visible on phones */
+            body::before { background-size: 260% auto; }
+
             .header-container { justify-content: space-between; }
 
             .hamburger { margin-left: auto; }
