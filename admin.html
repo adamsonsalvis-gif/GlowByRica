@@ -1053,12 +1053,43 @@
 
                 <!-- Clients -->
                 <section class="view" id="view-clients">
-                    <div class="topbar">
-                        <h2>Clients</h2>
+                    <div id="clients-list-panel">
+                        <div class="topbar">
+                            <h2>Clients</h2>
+                        </div>
+                        <div class="table-card">
+                            <h3>Client Profiles</h3>
+                            <table>
+                                <thead>
+                                    <tr><th>Name</th><th>Forms</th><th>Last Activity</th><th></th></tr>
+                                </thead>
+                                <tbody id="clients-tbody">
+                                    <tr><td colspan="4" class="empty-state">Loading…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p style="font-size:0.78rem; color:#a17b7b;">Profiles appear automatically when a form is saved for a client.</p>
                     </div>
-                    <div class="coming-soon">
-                        <i class="fa-solid fa-users"></i>
-                        Client profiles &amp; treatment history — coming soon
+
+                    <div id="client-profile-panel" style="display:none;">
+                        <div class="topbar">
+                            <h2 id="client-profile-name">Client</h2>
+                            <button class="btn btn-outline" id="client-back-btn"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                        </div>
+                        <div class="panel-grid">
+                            <div class="panel">
+                                <h3>Forms &amp; Consents</h3>
+                                <div id="client-forms-list"><p class="empty-state">Loading…</p></div>
+                                <div class="consent-actions">
+                                    <button class="btn" id="client-attach-medical"><i class="fa-solid fa-notes-medical"></i> Attach Medical History</button>
+                                    <button class="btn btn-outline" id="client-new-consent"><i class="fa-solid fa-plus"></i> New Consent Form</button>
+                                </div>
+                            </div>
+                            <div class="panel">
+                                <h3>Appointments</h3>
+                                <div id="client-appts-list"><p class="empty-state">Loading…</p></div>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -1097,7 +1128,6 @@
                 <button class="btn" style="justify-content:center;" data-template="botox">Botulinum Toxin A</button>
                 <button class="btn" style="justify-content:center;" data-template="filler">HA Dermal Filler</button>
                 <button class="btn" style="justify-content:center;" data-template="hyalase">Hyalase (Filler Dissolving)</button>
-                <button class="btn" style="justify-content:center;" data-template="medical">Medical History</button>
             </div>
             <div class="modal-actions">
                 <button class="btn btn-outline" id="cancel-consent-modal">Cancel</button>
@@ -1172,6 +1202,11 @@
                 views.forEach(v => v.classList.remove('active'));
                 document.getElementById('view-' + target).classList.add('active');
 
+                if (target === 'clients') {
+                    showClientsList();
+                    loadClients();
+                }
+
                 sidebar.classList.remove('open');
                 sidebarOverlay.classList.remove('active');
             });
@@ -1217,7 +1252,7 @@
 
         async function loadAllData() {
             document.getElementById('dashboard-date').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-            await Promise.all([loadDashboard(), loadAgenda(), loadConsentRecords(), renderCalendar()]);
+            await Promise.all([loadDashboard(), loadAgenda(), loadConsentRecords(), loadClients(), renderCalendar()]);
         }
 
         async function loadDashboard() {
@@ -1654,9 +1689,9 @@
             </div>`;
         }
 
-        function renderConsentForm(key, record) {
+        function renderConsentForm(key, record, prefill) {
             const tpl = CONSENT_TEMPLATES[key];
-            const d = record ? (record.data || {}) : {};
+            const d = record ? (record.data || {}) : (prefill || {});
             currentTemplateKey = key;
             sigPads = {};
             const ro = !!record;
@@ -1826,21 +1861,42 @@
             return data;
         }
 
+        let consentReturnTo = null; // 'clients' = go back to the open client profile
+
+        function switchView(target) {
+            navLinks.forEach(l => l.classList.toggle('active', l.getAttribute('data-view') === target));
+            views.forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + target).classList.add('active');
+        }
+
         function showConsentList() {
             consentFormPanel.style.display = 'none';
             consentListPanel.style.display = 'block';
         }
 
-        function openConsentForm(key) {
+        function consentGoBack() {
+            showConsentList();
+            if (consentReturnTo === 'clients' && currentClientName) {
+                switchView('clients');
+                openClientProfile(currentClientName);
+            }
+            consentReturnTo = null;
+        }
+
+        function openConsentForm(key, prefill, returnTo) {
+            consentReturnTo = returnTo || null;
+            switchView('consent');
             consentListPanel.style.display = 'none';
             consentFormPanel.style.display = 'block';
-            renderConsentForm(key, null);
+            renderConsentForm(key, null, prefill);
             window.scrollTo(0, 0);
         }
 
-        async function viewConsentRecord(id) {
+        async function viewConsentRecord(id, returnTo) {
             const { data, error } = await supabaseClient.from('consent_records').select('*').eq('id', id).single();
             if (error || !data) return;
+            consentReturnTo = returnTo || null;
+            switchView('consent');
             consentListPanel.style.display = 'none';
             consentFormPanel.style.display = 'block';
             renderConsentForm(data.template_key, data);
@@ -1874,17 +1930,23 @@
                 return;
             }
 
-            showConsentList();
+            consentGoBack();
             loadDashboard();
             loadConsentRecords();
+            loadClients();
         });
 
-        document.getElementById('consent-back-btn').addEventListener('click', showConsentList);
+        document.getElementById('consent-back-btn').addEventListener('click', consentGoBack);
         document.getElementById('consent-print-btn').addEventListener('click', () => window.print());
 
         // Template chooser modal
         const consentModal = document.getElementById('consent-modal-overlay');
+        let chooserPrefill = null;
+        let chooserReturn = null;
+
         document.getElementById('open-consent-modal').addEventListener('click', () => {
+            chooserPrefill = null;
+            chooserReturn = null;
             consentModal.classList.add('active');
         });
         document.getElementById('cancel-consent-modal').addEventListener('click', () => {
@@ -1893,8 +1955,99 @@
         consentModal.querySelectorAll('[data-template]').forEach(btn => {
             btn.addEventListener('click', () => {
                 consentModal.classList.remove('active');
-                openConsentForm(btn.dataset.template);
+                openConsentForm(btn.dataset.template, chooserPrefill, chooserReturn);
             });
+        });
+
+        // ==================== Clients ====================
+        let currentClientName = null;
+        const clientsListPanel = document.getElementById('clients-list-panel');
+        const clientProfilePanel = document.getElementById('client-profile-panel');
+
+        function showClientsList() {
+            clientProfilePanel.style.display = 'none';
+            clientsListPanel.style.display = 'block';
+        }
+
+        async function loadClients() {
+            const { data } = await supabaseClient
+                .from('consent_records')
+                .select('client_name, created_at')
+                .order('created_at', { ascending: false });
+
+            const clients = new Map();
+            (data || []).forEach(r => {
+                if (!clients.has(r.client_name)) clients.set(r.client_name, { count: 0, last: r.created_at });
+                clients.get(r.client_name).count++;
+            });
+
+            const tbody = document.getElementById('clients-tbody');
+            tbody.innerHTML = clients.size
+                ? Array.from(clients.entries()).map(([name, c]) => `
+                    <tr>
+                        <td>${escapeHtml(name)}</td>
+                        <td>${c.count}</td>
+                        <td>${formatDate(c.last.slice(0, 10))}</td>
+                        <td><button class="icon-btn" data-client="${escapeAttr(name)}" title="Open profile"><i class="fa-solid fa-folder-open"></i></button></td>
+                    </tr>`).join('')
+                : '<tr><td colspan="4" class="empty-state">No clients yet — profiles appear when a form is saved.</td></tr>';
+
+            tbody.querySelectorAll('[data-client]').forEach(btn => {
+                btn.addEventListener('click', () => openClientProfile(btn.dataset.client));
+            });
+        }
+
+        async function openClientProfile(name) {
+            currentClientName = name;
+            clientsListPanel.style.display = 'none';
+            clientProfilePanel.style.display = 'block';
+            document.getElementById('client-profile-name').textContent = name;
+
+            const [formsRes, apptsRes] = await Promise.all([
+                supabaseClient.from('consent_records').select('id, template_key, created_at')
+                    .eq('client_name', name).order('created_at', { ascending: false }),
+                supabaseClient.from('appointments').select('treatment, appointment_date, appointment_time, status')
+                    .eq('client_name', name).order('appointment_date', { ascending: false }).limit(10)
+            ]);
+
+            const formsEl = document.getElementById('client-forms-list');
+            const forms = formsRes.data || [];
+            formsEl.innerHTML = forms.length
+                ? forms.map(f => `
+                    <div class="list-row">
+                        <div><strong>${CONSENT_TEMPLATES[f.template_key] ? CONSENT_TEMPLATES[f.template_key].shortName : escapeHtml(f.template_key)}</strong><div class="meta">${formatDate(f.created_at.slice(0, 10))}</div></div>
+                        <button class="icon-btn" data-form-id="${f.id}" title="View"><i class="fa-solid fa-eye"></i></button>
+                    </div>`).join('')
+                : '<p class="empty-state">No forms yet.</p>';
+
+            formsEl.querySelectorAll('[data-form-id]').forEach(btn => {
+                btn.addEventListener('click', () => viewConsentRecord(btn.dataset.formId, 'clients'));
+            });
+
+            const apptsEl = document.getElementById('client-appts-list');
+            const appts = apptsRes.data || [];
+            apptsEl.innerHTML = appts.length
+                ? appts.map(a => `
+                    <div class="list-row">
+                        <div><strong>${escapeHtml(a.treatment)}</strong><div class="meta">${formatDate(a.appointment_date)} · ${formatTime(a.appointment_time)}</div></div>
+                        <span class="status-pill ${statusPillClass[a.status] || 'status-pending'}">${statusLabel[a.status] || a.status}</span>
+                    </div>`).join('')
+                : '<p class="empty-state">No appointments recorded.</p>';
+        }
+
+        document.getElementById('client-back-btn').addEventListener('click', showClientsList);
+
+        document.getElementById('client-attach-medical').addEventListener('click', () => {
+            openConsentForm('medical', {
+                patient_name: currentClientName,
+                form_date: new Date().toLocaleDateString('en-GB')
+            }, 'clients');
+        });
+
+        document.getElementById('client-new-consent').addEventListener('click', () => {
+            chooserPrefill = { patient_name: currentClientName };
+            chooserReturn = 'clients';
+            consentModal.classList.add('active');
         });
     </script>
 </body>
