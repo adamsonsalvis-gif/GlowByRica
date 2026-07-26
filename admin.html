@@ -1056,6 +1056,7 @@
                     <div id="clients-list-panel">
                         <div class="topbar">
                             <h2>Clients</h2>
+                            <button class="btn" id="open-client-modal"><i class="fa-solid fa-user-plus"></i> New Client</button>
                         </div>
                         <div class="table-card">
                             <h3>Client Profiles</h3>
@@ -1076,6 +1077,7 @@
                             <h2 id="client-profile-name">Client</h2>
                             <button class="btn btn-outline" id="client-back-btn"><i class="fa-solid fa-arrow-left"></i> Back</button>
                         </div>
+                        <p id="client-profile-contact" style="font-size:0.85rem; color:#6B1D1D; margin-top:-1.3rem; margin-bottom:1.5rem;"></p>
                         <div class="panel-grid">
                             <div class="panel">
                                 <h3>Forms &amp; Consents</h3>
@@ -1115,6 +1117,24 @@
             <div class="modal-actions">
                 <button class="btn btn-outline" id="cancel-appointment-modal">Cancel</button>
                 <button class="btn" id="save-appointment">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Client modal -->
+    <div class="modal-overlay" id="client-modal-overlay">
+        <div class="modal-card">
+            <h3>New Client</h3>
+            <p class="modal-error" id="client-error"></p>
+            <label>Name</label>
+            <input type="text" id="new-client-name">
+            <label>Phone (optional)</label>
+            <input type="tel" id="new-client-phone">
+            <label>Email (optional)</label>
+            <input type="email" id="new-client-email">
+            <div class="modal-actions">
+                <button class="btn btn-outline" id="cancel-client-modal">Cancel</button>
+                <button class="btn" id="save-client">Save</button>
             </div>
         </div>
     </div>
@@ -1941,6 +1961,11 @@
                 client_name: data.patient_name,
                 data
             });
+            // Register the client profile if this is a new name
+            await supabaseClient.from('clients').upsert(
+                { name: data.patient_name },
+                { onConflict: 'name', ignoreDuplicates: true }
+            );
             consentSaveBtn.disabled = false;
 
             if (error) {
@@ -1989,15 +2014,20 @@
         }
 
         async function loadClients() {
-            const { data } = await supabaseClient
-                .from('consent_records')
-                .select('client_name, created_at')
-                .order('created_at', { ascending: false });
+            const [clientRes, formRes] = await Promise.all([
+                supabaseClient.from('clients').select('name, created_at').order('created_at', { ascending: false }),
+                supabaseClient.from('consent_records').select('client_name, created_at').order('created_at', { ascending: false })
+            ]);
 
             const clients = new Map();
-            (data || []).forEach(r => {
+            (clientRes.data || []).forEach(c => {
+                clients.set(c.name, { count: 0, last: c.created_at });
+            });
+            (formRes.data || []).forEach(r => {
                 if (!clients.has(r.client_name)) clients.set(r.client_name, { count: 0, last: r.created_at });
-                clients.get(r.client_name).count++;
+                const m = clients.get(r.client_name);
+                m.count++;
+                if (r.created_at > m.last) m.last = r.created_at;
             });
 
             const tbody = document.getElementById('clients-tbody');
@@ -2022,12 +2052,17 @@
             clientProfilePanel.style.display = 'block';
             document.getElementById('client-profile-name').textContent = name;
 
-            const [formsRes, apptsRes] = await Promise.all([
+            const [formsRes, apptsRes, clientRes] = await Promise.all([
                 supabaseClient.from('consent_records').select('id, template_key, created_at')
                     .eq('client_name', name).order('created_at', { ascending: false }),
                 supabaseClient.from('appointments').select('treatment, appointment_date, appointment_time, status')
-                    .eq('client_name', name).order('appointment_date', { ascending: false }).limit(10)
+                    .eq('client_name', name).order('appointment_date', { ascending: false }).limit(10),
+                supabaseClient.from('clients').select('phone, email').eq('name', name).maybeSingle()
             ]);
+
+            const contact = clientRes.data || {};
+            document.getElementById('client-profile-contact').textContent =
+                [contact.phone, contact.email].filter(Boolean).join(' · ');
 
             const formsEl = document.getElementById('client-forms-list');
             const forms = formsRes.data || [];
@@ -2073,6 +2108,47 @@
             chooserPrefill = { patient_name: currentClientName };
             chooserReturn = 'clients';
             consentModal.classList.add('active');
+        });
+
+        // New Client modal
+        const clientModal = document.getElementById('client-modal-overlay');
+        document.getElementById('open-client-modal').addEventListener('click', () => {
+            clientModal.classList.add('active');
+        });
+        document.getElementById('cancel-client-modal').addEventListener('click', () => {
+            clientModal.classList.remove('active');
+        });
+
+        document.getElementById('save-client').addEventListener('click', async () => {
+            const name = document.getElementById('new-client-name').value.trim();
+            const phone = document.getElementById('new-client-phone').value.trim();
+            const email = document.getElementById('new-client-email').value.trim();
+            const errorEl = document.getElementById('client-error');
+
+            if (!name) {
+                errorEl.textContent = 'Please enter a name.';
+                errorEl.classList.add('active');
+                return;
+            }
+
+            const { error } = await supabaseClient.from('clients').insert({
+                name,
+                phone: phone || null,
+                email: email || null
+            });
+
+            if (error) {
+                errorEl.textContent = error.code === '23505' ? 'A client with this name already exists.' : error.message;
+                errorEl.classList.add('active');
+                return;
+            }
+
+            errorEl.classList.remove('active');
+            clientModal.classList.remove('active');
+            document.getElementById('new-client-name').value = '';
+            document.getElementById('new-client-phone').value = '';
+            document.getElementById('new-client-email').value = '';
+            loadClients();
         });
     </script>
 </body>
