@@ -32,10 +32,10 @@
             z-index: -1;
             pointer-events: none;
             background: url('images/marble.jpg') center / cover no-repeat;
-            /* sepia warms the cool marble into the cream palette;
-               contrast amplifies the veining, which is faint in the
-               middle of the source image */
-            filter: sepia(0.22) contrast(1.45) brightness(0.99);
+            /* sepia warms the cool marble into the cream palette. No
+               contrast: on a near-white image it clips the pale veins
+               to pure white and erases the texture. */
+            filter: sepia(0.25) brightness(0.97);
         }
 
         /* Anchor targets stop below the sticky header instead of under it */
