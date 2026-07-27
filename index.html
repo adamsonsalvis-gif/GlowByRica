@@ -524,10 +524,12 @@
             font-family: "Cinzel", serif;
         }
 
+        /* Wider than a plain dash and fading at both ends, matching the
+           hero divider treatment. */
         .section-divider {
-            width: 60px;
+            width: 150px;
             height: 2px;
-            background: #C9A463;
+            background: linear-gradient(90deg, transparent, #C9A463 28%, #C9A463 72%, transparent);
             margin: 0 auto 3rem;
         }
 
@@ -689,6 +691,9 @@
 
         .about-text .section-divider {
             margin: 0 0 1.5rem;
+            /* Left-aligned under the heading (and JS-sized to match its
+               width), so it starts solid at the text edge and trails off. */
+            background: linear-gradient(90deg, #C9A463, #C9A463 40%, transparent);
         }
 
         .about-text p {
@@ -1373,7 +1378,11 @@
             .about-inner { flex-direction: column; text-align: center; }
             .about-text { flex: 1 1 auto; width: 100%; padding-bottom: 0; }
             .about-text .section-title { text-align: center; }
-            .about-text .section-divider { margin: 0 auto 1.5rem; }
+            /* centred on mobile, so fade both ends again */
+            .about-text .section-divider {
+                margin: 0 auto 1.5rem;
+                background: linear-gradient(90deg, transparent, #C9A463 28%, #C9A463 72%, transparent);
+            }
             .about-badges { justify-content: center; clear: both; margin-top: 0; margin-bottom: 0; }
 
             /* Swap the first two badges on mobile so Aesthetic Practitioner
