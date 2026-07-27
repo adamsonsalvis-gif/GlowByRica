@@ -250,7 +250,6 @@
             margin: -13px 0 calc(-3rem - 25px) calc(11rem - 13px);
             transition: transform 0.4s ease, filter 0.4s ease;
             cursor: default;
-            mix-blend-mode: multiply;
             will-change: filter, transform;
             transform: translateZ(0) scale(0.9438);
             /* Invisible resting filter keeps the filter render path active,
@@ -261,11 +260,7 @@
 
         .hero-logo:hover {
             transform: translateZ(0) scale(1);
-            /* No drop-shadow here: the new logo file is cropped almost
-               edge-to-edge (near-zero transparent margin), so a
-               drop-shadow traces the rectangular canvas instead of the
-               logo shapes, showing up as a visible box on hover. */
-            filter: brightness(1.1);
+            filter: drop-shadow(0 0 14px rgba(201,164,99,0.75)) brightness(1.1);
         }
 
         .sparkle-particle {
@@ -1212,7 +1207,6 @@
                 max-width: 85% !important;
                 margin: 0 !important;
                 opacity: 1;
-                mix-blend-mode: multiply;
                 z-index: 1;
                 display: block !important;
             }
