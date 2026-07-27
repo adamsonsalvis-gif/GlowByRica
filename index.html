@@ -14,6 +14,13 @@
             box-sizing: border-box;
         }
 
+        html {
+            /* Reserve the scrollbar space permanently, so locking scroll for
+               the intro curtain doesn't change the viewport width (which
+               otherwise nudges centred content sideways). */
+            scrollbar-gutter: stable;
+        }
+
         body {
             font-family: "Quicksand", sans-serif;
             background-color: #FAF3EB;
@@ -1465,9 +1472,13 @@
 
         function open() {
             curtain.classList.add('open');
-            document.documentElement.style.overflow = '';
-            // Remove from the layer stack once the doors have finished
-            setTimeout(function() { curtain.classList.add('done'); }, 1300);
+            // Scroll stays locked until the doors have finished. Releasing it
+            // as the slide starts makes the scrollbar reappear, which narrows
+            // the viewport ~15px and visibly shifts the centred image left.
+            setTimeout(function() {
+                curtain.classList.add('done');
+                document.documentElement.style.overflow = '';
+            }, 1300);
         }
 
         // Hold the logo briefly, then open. Safety net in case 'load'
