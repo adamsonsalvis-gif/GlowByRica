@@ -242,12 +242,13 @@
            zoom look soft/pixelated. Margins compensate so the resting logo
            sits exactly where the old 420px layout put it. */
         .hero-logo {
-            /* New logo is portrait (1414x2000) vs the old square file.
-               Width reduced proportionally to keep the same rendered
-               height/footprint as before, rather than growing taller. */
-            width: 315px;
+            /* New logo is portrait (1414x2000) vs the old square file, so
+               width is set well below the old 445px to keep the rendered
+               height close to the previous footprint. Pixel offsets in the
+               margin compensate for the resting scale-down below. */
+            width: 265px;
             max-width: 100%;
-            margin: -13px 0 calc(-3rem - 25px) calc(11rem - 13px);
+            margin: -10px 0 calc(-3rem - 21px) calc(11rem - 7px);
             transition: transform 0.4s ease, filter 0.4s ease;
             cursor: default;
             will-change: filter, transform;
@@ -1376,7 +1377,8 @@
 
             .hero-content h2 { font-size: 1.8rem; }
             .section-title { font-size: 2rem; }
-            .hero-logo { width: 220px; }
+            /* height, not width: the 900px rule sets height with !important */
+            .hero-logo { height: 240px !important; }
         }
     </style>
 </head>

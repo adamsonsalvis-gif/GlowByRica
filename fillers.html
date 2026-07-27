@@ -583,7 +583,10 @@
            center the visible logo on the heading, not the image box. */
         .book-cta-logo {
             display: block;
-            width: 200px;
+            /* Height-based: the portrait logo overflowed the panel when
+               sized by width like the old square file. */
+            height: 175px;
+            width: auto;
             position: absolute;
             left: 1.2rem;
             top: 12px;
@@ -786,7 +789,7 @@
             <a href="index.html" class="back-link" style="margin-bottom:0.75rem;padding-left:3rem;">← Back to Home</a>
         </div>
         <div class="page-hero-right-logo">
-            <img src="images/GLOW.png" alt="Glow By Rica" style="width:220px;height:auto;display:block;">
+            <img src="images/GLOW.png" alt="Glow By Rica" style="height:220px;width:auto;display:block;">
         </div>
         <h1>Dermal Fillers</h1>
         <p>Restore volume, smooth fine lines and enhance your natural contours.</p>
