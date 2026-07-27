@@ -242,7 +242,10 @@
            zoom look soft/pixelated. Margins compensate so the resting logo
            sits exactly where the old 420px layout put it. */
         .hero-logo {
-            width: 445px;
+            /* New logo is portrait (1414x2000) vs the old square file.
+               Width reduced proportionally to keep the same rendered
+               height/footprint as before, rather than growing taller. */
+            width: 315px;
             max-width: 100%;
             margin: -13px 0 calc(-3rem - 25px) calc(11rem - 13px);
             transition: transform 0.4s ease, filter 0.4s ease;
@@ -1196,8 +1199,12 @@
                 top: 40% !important;
                 left: 50% !important;
                 transform: translate(-50%, -50%) !important;
-                width: 85% !important;
-                max-width: 320px !important;
+                /* Height-based now: the new portrait logo would overflow
+                   the fixed mobile hero height if sized by width like the
+                   old square file was. */
+                width: auto !important;
+                height: 280px !important;
+                max-width: 85% !important;
                 margin: 0 !important;
                 opacity: 1;
                 mix-blend-mode: multiply;
