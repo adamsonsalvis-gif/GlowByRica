@@ -261,9 +261,13 @@
             filter: drop-shadow(0 0 0 rgba(201,164,99,0)) brightness(1);
         }
 
-        .hero-logo:hover {
-            transform: translateZ(0) scale(1);
-            filter: drop-shadow(0 0 14px rgba(201,164,99,0.75)) brightness(1.1);
+        /* Mouse only: on touch screens :hover sticks after a tap, which left
+           the glow stuck on the logo after tapping it. */
+        @media (hover: hover) {
+            .hero-logo:hover {
+                transform: translateZ(0) scale(1);
+                filter: drop-shadow(0 0 14px rgba(201,164,99,0.75)) brightness(1.1);
+            }
         }
 
         .sparkle-particle {

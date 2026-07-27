@@ -594,6 +594,11 @@
         }
 
         @media (max-width: 640px) {
+            /* Trim the panel's top padding: on mobile the logo sits in
+               normal flow as the first child, so that padding was the
+               whole gap above it. */
+            .book-cta { padding: 1rem 1.5rem 2rem; }
+
             .book-cta-logo {
                 position: static;
                 /* explicit height: the calc(100%) above needs a positioned
@@ -757,7 +762,7 @@
             }
 
             .page-hero-right-logo img {
-                height: 150px !important;
+                height: 175px !important;
                 width: auto !important;
                 max-width: none !important;
             }
