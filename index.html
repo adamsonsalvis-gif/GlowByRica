@@ -213,6 +213,73 @@
         .hamburger.open span:nth-child(2) { opacity: 0; }
         .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
+        /* ---------- Intro curtain (first visit reveal) ----------
+           Logo centred on a marble screen, which then splits: top half
+           slides up, bottom half slides down, like doors opening. */
+        .intro-curtain {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            overflow: hidden;
+        }
+
+        .intro-curtain.done { display: none; }
+
+        .intro-panel {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 50.5%; /* slight overlap so no hairline seam shows */
+            /* Halves of one viewport-sized image, so they read as a single
+               surface before splitting apart */
+            background-image:
+                linear-gradient(rgba(250,243,235,0.55), rgba(250,243,235,0.55)),
+                url('images/marble.jpg');
+            background-size: 100vw 100vh, 100vw 100vh;
+            transition: transform 1.15s cubic-bezier(0.76, 0, 0.24, 1);
+            box-shadow: 0 0 30px rgba(58,13,13,0.12);
+        }
+
+        .intro-top {
+            top: 0;
+            background-position: center top, center top;
+        }
+
+        .intro-bottom {
+            bottom: 0;
+            background-position: center bottom, center bottom;
+        }
+
+        .intro-logo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.92);
+            height: min(46vh, 380px);
+            width: auto;
+            opacity: 0;
+            animation: intro-logo-in 0.85s ease forwards;
+            transition: opacity 0.5s ease, transform 0.9s cubic-bezier(0.76, 0, 0.24, 1);
+        }
+
+        @keyframes intro-logo-in {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
+            to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* Opening state */
+        .intro-curtain.open .intro-top { transform: translateY(-100%); }
+        .intro-curtain.open .intro-bottom { transform: translateY(100%); }
+
+        .intro-curtain.open .intro-logo {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(1.08);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .intro-curtain { display: none; }
+        }
+
         /* Hero */
         .hero {
             /* Translucent so the fixed smoke layer ghosts through while
@@ -1391,6 +1458,48 @@
     </style>
 </head>
 <body>
+    <!-- Intro curtain: shown once per visit, then splits open -->
+    <div class="intro-curtain" id="introCurtain">
+        <div class="intro-panel intro-top"></div>
+        <div class="intro-panel intro-bottom"></div>
+        <img src="images/GLOW.png" alt="Glow By Rica" class="intro-logo">
+    </div>
+    <script>
+    (function() {
+        var curtain = document.getElementById('introCurtain');
+        var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // Runs before paint so a returning visitor never sees a flash
+        if (reduced || sessionStorage.getItem('gbrIntroSeen')) {
+            curtain.classList.add('done');
+            return;
+        }
+
+        sessionStorage.setItem('gbrIntroSeen', '1');
+        document.documentElement.style.overflow = 'hidden';
+
+        function open() {
+            curtain.classList.add('open');
+            document.documentElement.style.overflow = '';
+            // Remove from the layer stack once the doors have finished
+            setTimeout(function() { curtain.classList.add('done'); }, 1300);
+        }
+
+        // Hold the logo briefly, then open. Safety net in case 'load'
+        // never fires (slow image, cached oddity) so the site can't stay
+        // covered.
+        var opened = false;
+        function go() {
+            if (opened) return;
+            opened = true;
+            setTimeout(open, 700);
+        }
+
+        window.addEventListener('load', go);
+        setTimeout(go, 2500);
+    })();
+    </script>
+
     <!-- Header -->
     <header>
         <div class="header-container">
