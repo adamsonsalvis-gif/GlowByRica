@@ -226,7 +226,8 @@
             overflow: hidden;
             /* S = the "cover" size for a square image on any viewport */
             --s: max(100vw, 100vh);
-            background: #FAF3EB;
+            /* No background here: the container must stay transparent so the
+               page shows through as the two panels slide apart. */
         }
 
         .intro-curtain.done { display: none; }
