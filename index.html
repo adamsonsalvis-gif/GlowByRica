@@ -234,8 +234,6 @@
             inset: 0;
             z-index: 9999;
             overflow: hidden;
-            /* S = the "cover" size for a square image on any viewport */
-            --s: max(100vw, 100vh);
             /* No background here: the container must stay transparent so the
                page shows through as the two panels slide apart.
                backdrop-filter blurs whatever is behind it -- i.e. the page --
@@ -252,35 +250,27 @@
 
         .intro-curtain.done { display: none; }
 
+        /* Both halves are full-size copies of the same image in the same
+           place, each clipped to show only its half. Alignment is therefore
+           automatic -- no viewport-unit maths, which is what broke on mobile
+           where 100vh is the toolbar-less height, not the visible one. */
         .intro-panel {
             position: absolute;
-            left: 0;
-            width: 100%;
+            inset: 0;
             /* Fallback tone sampled from the splash edges: without it the
                panels are transparent until the image decodes, so the page
                flashes through for a frame at load. */
             background-color: #F1F1F1;
             background-image: url('images/intro-splash.jpg');
             background-repeat: no-repeat;
-            background-size: var(--s) var(--s);
+            background-position: center center;
+            background-size: cover;
             transition: transform 1.25s cubic-bezier(0.76, 0, 0.24, 1);
         }
 
-        .intro-top {
-            top: 0;
-            /* +0.5px overlap keeps a hairline of the page from showing
-               through the join before the split starts */
-            height: calc(50% + 0.5px);
-            background-position: center calc((100vh - var(--s)) / 2);
-        }
-
-        .intro-bottom {
-            bottom: 0;
-            height: 50%;
-            /* same absolute position as the top panel, offset by this
-               panel's own top edge (50vh) */
-            background-position: center calc((100vh - var(--s)) / 2 - 50vh);
-        }
+        /* Clipped on the same box, so the seam is exact with no rounding gap */
+        .intro-top { -webkit-clip-path: inset(0 0 50% 0); clip-path: inset(0 0 50% 0); }
+        .intro-bottom { -webkit-clip-path: inset(50% 0 0 0); clip-path: inset(50% 0 0 0); }
 
         /* Opening state */
         .intro-curtain.open .intro-top { transform: translateY(-100%); }
