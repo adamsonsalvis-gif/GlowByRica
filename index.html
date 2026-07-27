@@ -261,7 +261,11 @@
 
         .hero-logo:hover {
             transform: translateZ(0) scale(1);
-            filter: drop-shadow(0 0 14px rgba(201,164,99,0.75)) brightness(1.1);
+            /* No drop-shadow here: the new logo file is cropped almost
+               edge-to-edge (near-zero transparent margin), so a
+               drop-shadow traces the rectangular canvas instead of the
+               logo shapes, showing up as a visible box on hover. */
+            filter: brightness(1.1);
         }
 
         .sparkle-particle {
@@ -284,6 +288,7 @@
             font-weight: 700;
             font-size: 46px;
             text-align: left;
+            margin-top: 2rem;
         }
 
         .hero-content p {
