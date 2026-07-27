@@ -614,9 +614,10 @@
            center the visible logo on the heading, not the image box. */
         .book-cta-logo {
             display: block;
-            /* Height-based: the portrait logo overflowed the panel when
-               sized by width like the old square file. */
-            height: 175px;
+            /* Fills the panel height minus an even 12px top/bottom, so it
+               is as large as possible with no leftover gap, and adapts to
+               each page's panel height automatically. */
+            height: calc(100% - 24px);
             width: auto;
             position: absolute;
             left: 1.2rem;
@@ -626,6 +627,10 @@
         @media (max-width: 640px) {
             .book-cta-logo {
                 position: static;
+                /* explicit height: the calc(100%) above needs a positioned
+                   parent, which no longer applies when static */
+                height: 150px;
+                width: auto;
                 margin: 0 auto 0.5rem;
             }
         }
