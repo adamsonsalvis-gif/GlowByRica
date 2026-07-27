@@ -128,9 +128,19 @@
         .page-hero {
             background: linear-gradient(135deg, rgba(250,243,235,0.5) 0%, rgba(233,211,194,0.5) 100%);
             padding: 3rem 2rem;
-            border-bottom: 3px solid #C9A463;
             text-align: center;
             position: relative;
+        }
+
+        /* Tapered divider, matching the main page hero */
+        .page-hero::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #C9A463 30%, #C9A463 70%, transparent);
         }
 
         .page-hero-left {
