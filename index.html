@@ -234,7 +234,17 @@
             /* S = the "cover" size for a square image on any viewport */
             --s: max(100vw, 100vh);
             /* No background here: the container must stay transparent so the
-               page shows through as the two panels slide apart. */
+               page shows through as the two panels slide apart.
+               backdrop-filter blurs whatever is behind it -- i.e. the page --
+               and clears as the doors open, so the site pulls into focus. */
+            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(14px);
+            transition: -webkit-backdrop-filter 1.15s ease, backdrop-filter 1.15s ease;
+        }
+
+        .intro-curtain.open {
+            -webkit-backdrop-filter: blur(0px);
+            backdrop-filter: blur(0px);
         }
 
         .intro-curtain.done { display: none; }
@@ -1478,7 +1488,7 @@
             setTimeout(function() {
                 curtain.classList.add('done');
                 document.documentElement.style.overflow = '';
-            }, 1300);
+            }, 1450);
         }
 
         // Hold the logo briefly, then open. Safety net in case 'load'
