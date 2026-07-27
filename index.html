@@ -292,8 +292,8 @@
             position: relative;
         }
 
-        /* Divider: gold rule with a gap in the middle for a diamond, echoing
-           the ornament on Rica's leaflets and the consent forms. */
+        /* Divider: gold hairline that fades out towards both edges, so the
+           hero meets the next section softly instead of with a hard rule. */
         .hero::after {
             content: '';
             position: absolute;
@@ -302,22 +302,7 @@
             bottom: 0;
             height: 2px;
             background: linear-gradient(90deg,
-                transparent 0, #C9A463 14%, #C9A463 46%,
-                transparent 46%, transparent 54%,
-                #C9A463 54%, #C9A463 86%, transparent 100%);
-        }
-
-        .hero::before {
-            content: '\25C6';
-            position: absolute;
-            left: 50%;
-            /* half the glyph height, so it stays centred on the rule */
-            bottom: -0.62rem;
-            transform: translateX(-50%);
-            color: #C9A463;
-            font-size: 1.25rem;
-            line-height: 1;
-            z-index: 3;
+                transparent 0, #C9A463 30%, #C9A463 70%, transparent 100%);
         }
 
         .hero-inner {
