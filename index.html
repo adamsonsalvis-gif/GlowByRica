@@ -5,6 +5,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Fetched immediately rather than waiting for CSS to discover it, so the
+         intro splash is ready before the curtain is shown -->
+    <link rel="preload" as="image" href="images/intro-splash.jpg">
     <title>Glow By Rica - Aesthetics Clinic Derby</title>
     <link rel="icon" type="image/jpeg" href="images/GLOW2.jpg">
     <style>
@@ -253,6 +256,10 @@
             position: absolute;
             left: 0;
             width: 100%;
+            /* Fallback tone sampled from the splash edges: without it the
+               panels are transparent until the image decodes, so the page
+               flashes through for a frame at load. */
+            background-color: #F1F1F1;
             background-image: url('images/intro-splash.jpg');
             background-repeat: no-repeat;
             background-size: var(--s) var(--s);
