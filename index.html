@@ -214,13 +214,19 @@
         .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
         /* ---------- Intro curtain (first visit reveal) ----------
-           Logo centred on a marble screen, which then splits: top half
-           slides up, bottom half slides down, like doors opening. */
+           One full-screen logo image, rendered as two halves that slide
+           apart -- so the logo itself splits down the middle like doors.
+           Both panels paint the SAME image at the same viewport position;
+           each just shows the half inside its own box, which is what makes
+           them read as one picture until they part. */
         .intro-curtain {
             position: fixed;
             inset: 0;
             z-index: 9999;
             overflow: hidden;
+            /* S = the "cover" size for a square image on any viewport */
+            --s: max(100vw, 100vh);
+            background: #FAF3EB;
         }
 
         .intro-curtain.done { display: none; }
@@ -229,52 +235,31 @@
             position: absolute;
             left: 0;
             width: 100%;
-            height: 50.5%; /* slight overlap so no hairline seam shows */
-            /* Halves of one viewport-sized image, so they read as a single
-               surface before splitting apart */
-            background-image:
-                linear-gradient(rgba(250,243,235,0.55), rgba(250,243,235,0.55)),
-                url('images/marble.jpg');
-            background-size: 100vw 100vh, 100vw 100vh;
-            transition: transform 1.15s cubic-bezier(0.76, 0, 0.24, 1);
-            box-shadow: 0 0 30px rgba(58,13,13,0.12);
+            background-image: url('images/intro-splash.jpg');
+            background-repeat: no-repeat;
+            background-size: var(--s) var(--s);
+            transition: transform 1.25s cubic-bezier(0.76, 0, 0.24, 1);
         }
 
         .intro-top {
             top: 0;
-            background-position: center top, center top;
+            /* +0.5px overlap keeps a hairline of the page from showing
+               through the join before the split starts */
+            height: calc(50% + 0.5px);
+            background-position: center calc((100vh - var(--s)) / 2);
         }
 
         .intro-bottom {
             bottom: 0;
-            background-position: center bottom, center bottom;
-        }
-
-        .intro-logo {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.92);
-            height: min(46vh, 380px);
-            width: auto;
-            opacity: 0;
-            animation: intro-logo-in 0.85s ease forwards;
-            transition: opacity 0.5s ease, transform 0.9s cubic-bezier(0.76, 0, 0.24, 1);
-        }
-
-        @keyframes intro-logo-in {
-            from { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
-            to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            height: 50%;
+            /* same absolute position as the top panel, offset by this
+               panel's own top edge (50vh) */
+            background-position: center calc((100vh - var(--s)) / 2 - 50vh);
         }
 
         /* Opening state */
         .intro-curtain.open .intro-top { transform: translateY(-100%); }
         .intro-curtain.open .intro-bottom { transform: translateY(100%); }
-
-        .intro-curtain.open .intro-logo {
-            opacity: 0;
-            transform: translate(-50%, -50%) scale(1.08);
-        }
 
         @media (prefers-reduced-motion: reduce) {
             .intro-curtain { display: none; }
@@ -1462,7 +1447,6 @@
     <div class="intro-curtain" id="introCurtain">
         <div class="intro-panel intro-top"></div>
         <div class="intro-panel intro-bottom"></div>
-        <img src="images/GLOW.png" alt="Glow By Rica" class="intro-logo">
     </div>
     <script>
     (function() {
