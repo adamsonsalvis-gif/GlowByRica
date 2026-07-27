@@ -340,7 +340,10 @@
         .sparkle-particle {
             position: fixed;
             pointer-events: none;
-            z-index: 9999;
+            /* Below the header (100) and its dropdown, so sparkles drifting
+               up from the logo pass behind them instead of over the open
+               mobile menu. */
+            z-index: 90;
             color: #C9A463;
             animation: sparkle-fly 0.8s ease forwards;
             user-select: none;
