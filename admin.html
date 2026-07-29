@@ -500,6 +500,95 @@
 
         .coming-soon i { font-size: 2rem; color: #C9A463; margin-bottom: 1rem; display: block; }
 
+        /* ---------- Before / after photos ---------- */
+        .photo-toolbar {
+            display: flex;
+            gap: 0.6rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.8rem;
+        }
+
+        .photo-card {
+            border: 1px solid rgba(58,13,13,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            background: #FAF3EB;
+            position: relative;
+        }
+
+        .photo-card img {
+            width: 100%;
+            aspect-ratio: 3 / 4;
+            object-fit: cover;
+            display: block;
+            cursor: pointer;
+            background: #E9D3C2;
+        }
+
+        .photo-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.4rem 0.5rem;
+            font-size: 0.7rem;
+        }
+
+        .photo-tag {
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            padding: 0.15rem 0.45rem;
+            border-radius: 50px;
+        }
+
+        .photo-tag.before { background: rgba(201,164,99,0.25); color: #8a6a2b; }
+        .photo-tag.after { background: rgba(76,150,90,0.18); color: #3f7a4c; }
+
+        .photo-date { color: #a17b7b; }
+
+        .photo-del {
+            background: none;
+            border: none;
+            color: #b23a3a;
+            cursor: pointer;
+            font-size: 0.75rem;
+            padding: 0 0.15rem;
+        }
+
+        /* Full-size viewer */
+        .photo-viewer {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(26,6,6,0.9);
+            z-index: 600;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .photo-viewer.active { display: flex; }
+        .photo-viewer img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+
+        .photo-viewer-close {
+            position: absolute;
+            top: 1rem;
+            right: 1.2rem;
+            background: none;
+            border: none;
+            color: #FAF3EB;
+            font-size: 1.8rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+
         /* ---------- Consent form paper (styled after the Canva forms) ---------- */
         .consent-paper {
             background:
@@ -1216,6 +1305,27 @@
                                 <div id="client-appts-list"><p class="empty-state">Loading…</p></div>
                             </div>
                         </div>
+
+                        <div class="panel" style="margin-top:1.5rem;">
+                            <h3>Before &amp; After Photos</h3>
+                            <div class="photo-toolbar">
+                                <select id="photo-kind" style="padding:0.5rem 0.7rem; border-radius:8px; border:1px solid rgba(58,13,13,0.2); font-family:'Quicksand',sans-serif; background:#fff;">
+                                    <option value="before">Before</option>
+                                    <option value="after">After</option>
+                                </select>
+                                <input type="file" id="photo-input" accept="image/*" multiple style="display:none;">
+                                <button class="btn" id="photo-upload-btn"><i class="fa-solid fa-camera"></i> Add photos</button>
+                                <span id="photo-progress" style="font-size:0.8rem; color:#6B1D1D;"></span>
+                            </div>
+                            <div class="photo-grid" id="client-photos-grid">
+                                <p class="empty-state">Loading…</p>
+                            </div>
+                            <p style="font-size:0.72rem; color:#a17b7b; margin-top:0.8rem;">
+                                Stored privately — only visible to you when signed in. Check the client
+                                consented to photographs on their consent form.
+                            </p>
+                            <p class="modal-error" id="photo-error" style="margin-top:0.5rem;"></p>
+                        </div>
                     </div>
                 </section>
 
@@ -1291,6 +1401,12 @@
                 <button class="btn" id="save-appointment">Save</button>
             </div>
         </div>
+    </div>
+
+    <!-- Full-size photo viewer -->
+    <div class="photo-viewer" id="photo-viewer">
+        <button class="photo-viewer-close" id="photo-viewer-close">&times;</button>
+        <img id="photo-viewer-img" alt="">
     </div>
 
     <!-- New Client modal -->
@@ -2593,6 +2709,8 @@
             document.getElementById('client-profile-contact').textContent =
                 [contact.phone, contact.email].filter(Boolean).join(' · ');
 
+            loadClientPhotos(name);
+
             const formsEl = document.getElementById('client-forms-list');
             const forms = formsRes.data || [];
             formsEl.innerHTML = forms.length
@@ -2644,6 +2762,146 @@
             chooserPrefill = { patient_name: currentClientName };
             chooserReturn = 'clients';
             consentModal.classList.add('active');
+        });
+
+        // ==================== Before / after photos ====================
+        const PHOTO_BUCKET = 'patient-photos';
+        const photoGrid = document.getElementById('client-photos-grid');
+        const photoInput = document.getElementById('photo-input');
+        const photoProgress = document.getElementById('photo-progress');
+        const photoErrorEl = document.getElementById('photo-error');
+
+        function photoError(msg) {
+            photoErrorEl.textContent = msg || '';
+            photoErrorEl.classList.toggle('active', !!msg);
+        }
+
+        function slugify(name) {
+            return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'client';
+        }
+
+        // iPhone photos are ~4MB each; downscale before upload so the free
+        // storage tier isn't burned through and the grid loads quickly.
+        async function shrinkImage(file, maxEdge = 1600, quality = 0.85) {
+            try {
+                const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+                const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+                const w = Math.round(bitmap.width * scale);
+                const h = Math.round(bitmap.height * scale);
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
+                bitmap.close();
+                const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+                return blob || file;
+            } catch (e) {
+                return file; // unsupported format (e.g. odd HEIC) -- send as-is
+            }
+        }
+
+        async function loadClientPhotos(name) {
+            photoError('');
+            photoGrid.innerHTML = '<p class="empty-state">Loading…</p>';
+
+            const { data, error } = await supabaseClient
+                .from('client_photos')
+                .select('*')
+                .eq('client_name', name)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                photoGrid.innerHTML = '<p class="empty-state">Could not load photos.</p>';
+                photoError(error.message);
+                return;
+            }
+            if (!data || !data.length) {
+                photoGrid.innerHTML = '<p class="empty-state">No photos yet.</p>';
+                return;
+            }
+
+            // Private bucket: display needs short-lived signed links
+            const { data: signed } = await supabaseClient.storage
+                .from(PHOTO_BUCKET)
+                .createSignedUrls(data.map(p => p.path), 3600);
+
+            const urlFor = {};
+            (signed || []).forEach(s => { if (s.path) urlFor[s.path] = s.signedUrl; });
+
+            photoGrid.innerHTML = data.map(p => `
+                <div class="photo-card">
+                    <img src="${urlFor[p.path] || ''}" alt="${p.kind}" data-full="${urlFor[p.path] || ''}">
+                    <div class="photo-meta">
+                        <span class="photo-tag ${p.kind}">${p.kind}</span>
+                        <span class="photo-date">${formatDate(p.created_at.slice(0, 10))}</span>
+                        <button class="photo-del" data-photo-id="${p.id}" data-photo-path="${escapeAttr(p.path)}" title="Delete">&times;</button>
+                    </div>
+                </div>`).join('');
+
+            photoGrid.querySelectorAll('img[data-full]').forEach(img => {
+                img.addEventListener('click', () => {
+                    document.getElementById('photo-viewer-img').src = img.dataset.full;
+                    document.getElementById('photo-viewer').classList.add('active');
+                });
+            });
+
+            photoGrid.querySelectorAll('[data-photo-id]').forEach(btn => {
+                btn.addEventListener('click', () => deletePhoto(btn.dataset.photoId, btn.dataset.photoPath));
+            });
+        }
+
+        document.getElementById('photo-upload-btn').addEventListener('click', () => photoInput.click());
+
+        photoInput.addEventListener('change', async () => {
+            const files = Array.from(photoInput.files || []);
+            if (!files.length || !currentClientName) return;
+
+            const kind = document.getElementById('photo-kind').value;
+            photoError('');
+
+            for (let i = 0; i < files.length; i++) {
+                photoProgress.textContent = `Uploading ${i + 1} of ${files.length}…`;
+                const blob = await shrinkImage(files[i]);
+                const path = `${slugify(currentClientName)}/${Date.now()}-${i}-${kind}.jpg`;
+
+                const { error: upErr } = await supabaseClient.storage
+                    .from(PHOTO_BUCKET)
+                    .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+
+                if (upErr) {
+                    photoProgress.textContent = '';
+                    photoError(upErr.message);
+                    break;
+                }
+
+                const { error: rowErr } = await supabaseClient
+                    .from('client_photos')
+                    .insert({ client_name: currentClientName, path, kind });
+
+                if (rowErr) {
+                    photoProgress.textContent = '';
+                    photoError(rowErr.message);
+                    break;
+                }
+            }
+
+            photoProgress.textContent = '';
+            photoInput.value = '';
+            loadClientPhotos(currentClientName);
+        });
+
+        async function deletePhoto(id, path) {
+            if (!confirm('Delete this photo? This cannot be undone.')) return;
+            await supabaseClient.storage.from(PHOTO_BUCKET).remove([path]);
+            const { error } = await supabaseClient.from('client_photos').delete().eq('id', id);
+            if (error) { photoError(error.message); return; }
+            loadClientPhotos(currentClientName);
+        }
+
+        document.getElementById('photo-viewer-close').addEventListener('click', () => {
+            document.getElementById('photo-viewer').classList.remove('active');
+        });
+        document.getElementById('photo-viewer').addEventListener('click', e => {
+            if (e.target.id === 'photo-viewer') e.currentTarget.classList.remove('active');
         });
 
         // ==================== Two-factor setup (Settings) ====================
