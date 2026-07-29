@@ -20,8 +20,7 @@ alter table client_photos enable row level security;
 
 drop policy if exists "admin only" on client_photos;
 create policy "admin only" on client_photos
-  for all using (exists (select 1 from admin_users a where a.user_id = auth.uid()))
-  with check (exists (select 1 from admin_users a where a.user_id = auth.uid()));
+  for all using (public.is_admin()) with check (public.is_admin());
 
 -- Private bucket
 insert into storage.buckets (id, name, public)
@@ -33,19 +32,19 @@ drop policy if exists "admin read patient photos" on storage.objects;
 create policy "admin read patient photos" on storage.objects
   for select using (
     bucket_id = 'patient-photos'
-    and exists (select 1 from admin_users a where a.user_id = auth.uid())
+    and public.is_admin()
   );
 
 drop policy if exists "admin upload patient photos" on storage.objects;
 create policy "admin upload patient photos" on storage.objects
   for insert with check (
     bucket_id = 'patient-photos'
-    and exists (select 1 from admin_users a where a.user_id = auth.uid())
+    and public.is_admin()
   );
 
 drop policy if exists "admin delete patient photos" on storage.objects;
 create policy "admin delete patient photos" on storage.objects
   for delete using (
     bucket_id = 'patient-photos'
-    and exists (select 1 from admin_users a where a.user_id = auth.uid())
+    and public.is_admin()
   );

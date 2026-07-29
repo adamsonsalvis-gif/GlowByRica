@@ -20,36 +20,40 @@ insert into admin_users (user_id, note)
 select id, email from auth.users
 on conflict (user_id) do nothing;
 
--- Only admins can see the admin list itself
-drop policy if exists "admins read admin list" on admin_users;
-create policy "admins read admin list" on admin_users
-  for select using (exists (select 1 from admin_users a where a.user_id = auth.uid()));
+-- Membership check runs in a SECURITY DEFINER function so policies never
+-- re-enter admin_users (which would be infinite recursion).
+create or replace function public.is_admin()
+returns boolean language sql stable security definer set search_path = public
+as $$ select exists (select 1 from admin_users where user_id = auth.uid()) $$;
+
+revoke all on function public.is_admin() from public;
+grant execute on function public.is_admin() to authenticated;
+
+-- Non-recursive: you may read your own admin row
+drop policy if exists "own admin row" on admin_users;
+create policy "own admin row" on admin_users
+  for select using (user_id = auth.uid());
 
 -- Swap every table over to admin-only access
 drop policy if exists "authenticated full access" on appointments;
 create policy "admin only" on appointments
-  for all using (exists (select 1 from admin_users a where a.user_id = auth.uid()))
-  with check (exists (select 1 from admin_users a where a.user_id = auth.uid()));
+  for all using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "authenticated full access" on consent_forms;
 create policy "admin only" on consent_forms
-  for all using (exists (select 1 from admin_users a where a.user_id = auth.uid()))
-  with check (exists (select 1 from admin_users a where a.user_id = auth.uid()));
+  for all using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "authenticated full access" on consent_records;
 create policy "admin only" on consent_records
-  for all using (exists (select 1 from admin_users a where a.user_id = auth.uid()))
-  with check (exists (select 1 from admin_users a where a.user_id = auth.uid()));
+  for all using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "authenticated full access" on blocked_days;
 create policy "admin only" on blocked_days
-  for all using (exists (select 1 from admin_users a where a.user_id = auth.uid()))
-  with check (exists (select 1 from admin_users a where a.user_id = auth.uid()));
+  for all using (public.is_admin()) with check (public.is_admin());
 
 drop policy if exists "authenticated full access" on clients;
 create policy "admin only" on clients
-  for all using (exists (select 1 from admin_users a where a.user_id = auth.uid()))
-  with check (exists (select 1 from admin_users a where a.user_id = auth.uid()));
+  for all using (public.is_admin()) with check (public.is_admin());
 
 -- Sanity check: should list exactly the intended admin account(s)
 select u.email, a.added_at from admin_users a join auth.users u on u.id = a.user_id;
