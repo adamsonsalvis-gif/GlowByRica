@@ -1008,9 +1008,18 @@
             <h1>Admin Portal</h1>
             <p class="sub">Sign in to manage bookings &amp; consent forms</p>
             <p class="modal-error" id="login-error"></p>
-            <input type="email" placeholder="Email" id="login-email">
-            <input type="password" placeholder="Password" id="login-password">
-            <button id="login-btn">Sign In</button>
+            <div id="password-step">
+                <input type="email" placeholder="Email" id="login-email">
+                <input type="password" placeholder="Password" id="login-password">
+                <button id="login-btn">Sign In</button>
+            </div>
+            <div id="mfa-step" style="display:none;">
+                <p class="sub" style="margin-bottom:1rem;">Enter the 6-digit code from your authenticator app</p>
+                <input type="text" id="mfa-code" inputmode="numeric" autocomplete="one-time-code"
+                       maxlength="6" placeholder="000000" style="text-align:center; letter-spacing:0.3em; font-size:1.1rem;">
+                <button id="mfa-verify-btn">Verify</button>
+                <p class="login-note"><a href="#" id="mfa-cancel" style="color:#a17b7b; text-decoration:underline;">Back to sign in</a></p>
+            </div>
         </div>
     </div>
 
@@ -1028,7 +1037,7 @@
                     <li><a href="#" class="nav-link" data-view="calendar"><i class="fa-solid fa-calendar-days"></i> Calendar</a></li>
                     <li><a href="#" class="nav-link" data-view="consent"><i class="fa-solid fa-file-signature"></i> Consent Forms</a></li>
                     <li><a href="#" class="nav-link" data-view="clients"><i class="fa-solid fa-users"></i> Clients</a></li>
-                    <li><a href="#" class="disabled"><i class="fa-solid fa-gear"></i> Settings</a></li>
+                    <li><a href="#" class="nav-link" data-view="settings"><i class="fa-solid fa-gear"></i> Settings</a></li>
                 </ul>
             </nav>
             <div class="sidebar-logout">
@@ -1210,6 +1219,54 @@
                     </div>
                 </section>
 
+                <!-- Settings -->
+                <section class="view" id="view-settings">
+                    <div class="topbar">
+                        <h2>Settings</h2>
+                    </div>
+
+                    <div class="panel" style="max-width:560px;">
+                        <h3>Two-Factor Authentication</h3>
+                        <p style="font-size:0.85rem; color:#6B1D1D; margin-bottom:1rem;">
+                            Adds a second step at login using a code from an authenticator app,
+                            so a stolen password alone can't open client records.
+                        </p>
+
+                        <div id="mfa-status" style="margin-bottom:1rem;">
+                            <span class="status-pill status-pending">Checking…</span>
+                        </div>
+
+                        <div id="mfa-enroll-area" style="display:none;">
+                            <p style="font-size:0.85rem; margin-bottom:0.8rem;">
+                                Scan this with Google Authenticator, Authy, or your phone's
+                                built-in authenticator, then enter the 6-digit code it shows.
+                            </p>
+                            <img id="mfa-qr" alt="Authenticator QR code"
+                                 style="width:190px; height:190px; background:#fff; border:1px solid rgba(58,13,13,0.15); border-radius:8px; padding:6px;">
+                            <p style="font-size:0.72rem; color:#a17b7b; margin:0.6rem 0;">
+                                Can't scan? Enter this key manually:
+                                <code id="mfa-secret" style="user-select:all; word-break:break-all;"></code>
+                            </p>
+                            <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+                                <input type="text" id="mfa-enroll-code" inputmode="numeric" maxlength="6"
+                                       placeholder="000000"
+                                       style="width:130px; padding:0.6rem; border-radius:8px; border:1px solid rgba(58,13,13,0.2); text-align:center; letter-spacing:0.2em; font-family:'Quicksand',sans-serif;">
+                                <button class="btn" id="mfa-confirm-btn">Confirm</button>
+                                <button class="btn btn-outline" id="mfa-cancel-enroll">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div class="consent-actions" id="mfa-actions">
+                            <button class="btn" id="mfa-start-btn" style="display:none;">
+                                <i class="fa-solid fa-shield-halved"></i> Enable two-factor
+                            </button>
+                            <button class="btn btn-outline" id="mfa-remove-btn" style="display:none;">Turn off</button>
+                        </div>
+
+                        <p class="modal-error" id="mfa-settings-error" style="margin-top:0.8rem;"></p>
+                    </div>
+                </section>
+
             </main>
         </div>
     </div>
@@ -1276,11 +1333,33 @@
         const loginBtn = document.getElementById('login-btn');
         const loginError = document.getElementById('login-error');
 
+        const passwordStep = document.getElementById('password-step');
+        const mfaStep = document.getElementById('mfa-step');
+
         function showLoggedOut(message) {
             adminShell.classList.remove('active');
             loginScreen.style.display = 'flex';
+            passwordStep.style.display = 'block';
+            mfaStep.style.display = 'none';
+            document.getElementById('mfa-code').value = '';
             loginError.textContent = message || '';
             loginError.classList.toggle('active', !!message);
+        }
+
+        function showMfaPrompt() {
+            loginScreen.style.display = 'flex';
+            adminShell.classList.remove('active');
+            passwordStep.style.display = 'none';
+            mfaStep.style.display = 'block';
+            document.getElementById('mfa-code').focus();
+        }
+
+        // aal1 = password only, aal2 = password + authenticator code.
+        // nextLevel is aal2 whenever the account has a verified factor.
+        async function needsSecondFactor() {
+            const { data, error } = await supabaseClient.auth.mfa.getAuthenticatorAssuranceLevel();
+            if (error || !data) return false;
+            return data.nextLevel === 'aal2' && data.currentLevel !== 'aal2';
         }
 
         function showLoggedIn() {
@@ -1306,7 +1385,63 @@
                 return;
             }
 
+            loginError.classList.remove('active');
+            if (await needsSecondFactor()) {
+                showMfaPrompt();
+                return;
+            }
             showLoggedIn();
+        });
+
+        // ---- Second factor at login ----
+        const mfaVerifyBtn = document.getElementById('mfa-verify-btn');
+
+        mfaVerifyBtn.addEventListener('click', async () => {
+            const code = document.getElementById('mfa-code').value.trim();
+            if (code.length < 6) {
+                loginError.textContent = 'Enter the 6-digit code.';
+                loginError.classList.add('active');
+                return;
+            }
+
+            mfaVerifyBtn.disabled = true;
+            mfaVerifyBtn.textContent = 'Verifying…';
+
+            const { data: factors } = await supabaseClient.auth.mfa.listFactors();
+            const totp = (factors && factors.totp || []).find(f => f.status === 'verified');
+
+            let error = null;
+            if (!totp) {
+                error = { message: 'No authenticator is set up on this account.' };
+            } else {
+                ({ error } = await supabaseClient.auth.mfa.challengeAndVerify({ factorId: totp.id, code }));
+            }
+
+            mfaVerifyBtn.disabled = false;
+            mfaVerifyBtn.textContent = 'Verify';
+
+            if (error) {
+                loginError.textContent = error.message;
+                loginError.classList.add('active');
+                document.getElementById('mfa-code').value = '';
+                return;
+            }
+
+            loginError.classList.remove('active');
+            document.getElementById('mfa-code').value = '';
+            mfaStep.style.display = 'none';
+            passwordStep.style.display = 'block';
+            showLoggedIn();
+        });
+
+        document.getElementById('mfa-code').addEventListener('keydown', e => {
+            if (e.key === 'Enter') mfaVerifyBtn.click();
+        });
+
+        document.getElementById('mfa-cancel').addEventListener('click', async (e) => {
+            e.preventDefault();
+            await supabaseClient.auth.signOut();
+            showLoggedOut();
         });
 
         document.getElementById('logout-link').addEventListener('click', async (e) => {
@@ -1315,11 +1450,15 @@
             showLoggedOut();
         });
 
-        // Restore session on load (page refresh keeps her logged in)
-        supabaseClient.auth.getSession().then(({ data }) => {
-            if (data.session) {
-                showLoggedIn();
+        // Restore session on load (page refresh keeps her logged in), but a
+        // refresh must not skip the second factor
+        supabaseClient.auth.getSession().then(async ({ data }) => {
+            if (!data.session) return;
+            if (await needsSecondFactor()) {
+                showMfaPrompt();
+                return;
             }
+            showLoggedIn();
         });
 
         // View switching
@@ -1341,6 +1480,7 @@
                     showClientsList();
                     loadClients();
                 }
+                if (target === 'settings') loadMfaStatus();
 
                 sidebar.classList.remove('open');
                 sidebarOverlay.classList.remove('active');
@@ -2504,6 +2644,97 @@
             chooserPrefill = { patient_name: currentClientName };
             chooserReturn = 'clients';
             consentModal.classList.add('active');
+        });
+
+        // ==================== Two-factor setup (Settings) ====================
+        const mfaStatusEl = document.getElementById('mfa-status');
+        const mfaEnrollArea = document.getElementById('mfa-enroll-area');
+        const mfaStartBtn = document.getElementById('mfa-start-btn');
+        const mfaRemoveBtn = document.getElementById('mfa-remove-btn');
+        const mfaSettingsError = document.getElementById('mfa-settings-error');
+        let pendingFactorId = null;
+
+        function mfaError(msg) {
+            mfaSettingsError.textContent = msg;
+            mfaSettingsError.classList.toggle('active', !!msg);
+        }
+
+        async function verifiedFactor() {
+            const { data } = await supabaseClient.auth.mfa.listFactors();
+            return (data && data.totp || []).find(f => f.status === 'verified') || null;
+        }
+
+        async function loadMfaStatus() {
+            mfaError('');
+            mfaEnrollArea.style.display = 'none';
+            const factor = await verifiedFactor();
+
+            if (factor) {
+                mfaStatusEl.innerHTML = '<span class="status-pill status-signed">Enabled</span>';
+                mfaStartBtn.style.display = 'none';
+                mfaRemoveBtn.style.display = 'inline-flex';
+            } else {
+                mfaStatusEl.innerHTML = '<span class="status-pill status-expired">Not enabled</span>';
+                mfaStartBtn.style.display = 'inline-flex';
+                mfaRemoveBtn.style.display = 'none';
+            }
+        }
+
+        mfaStartBtn.addEventListener('click', async () => {
+            mfaError('');
+            mfaStartBtn.disabled = true;
+
+            // Clear out any half-finished attempt, otherwise enroll rejects
+            const { data: existing } = await supabaseClient.auth.mfa.listFactors();
+            for (const f of (existing && existing.totp || [])) {
+                if (f.status !== 'verified') await supabaseClient.auth.mfa.unenroll({ factorId: f.id });
+            }
+
+            const { data, error } = await supabaseClient.auth.mfa.enroll({
+                factorType: 'totp',
+                friendlyName: 'Authenticator ' + Date.now()
+            });
+            mfaStartBtn.disabled = false;
+
+            if (error) { mfaError(error.message); return; }
+
+            pendingFactorId = data.id;
+            document.getElementById('mfa-qr').src = data.totp.qr_code;
+            document.getElementById('mfa-secret').textContent = data.totp.secret;
+            mfaEnrollArea.style.display = 'block';
+            mfaStartBtn.style.display = 'none';
+        });
+
+        document.getElementById('mfa-confirm-btn').addEventListener('click', async () => {
+            const code = document.getElementById('mfa-enroll-code').value.trim();
+            if (code.length < 6) { mfaError('Enter the 6-digit code.'); return; }
+
+            const { error } = await supabaseClient.auth.mfa.challengeAndVerify({
+                factorId: pendingFactorId,
+                code
+            });
+
+            if (error) { mfaError(error.message); return; }
+
+            document.getElementById('mfa-enroll-code').value = '';
+            pendingFactorId = null;
+            loadMfaStatus();
+        });
+
+        document.getElementById('mfa-cancel-enroll').addEventListener('click', async () => {
+            if (pendingFactorId) await supabaseClient.auth.mfa.unenroll({ factorId: pendingFactorId });
+            pendingFactorId = null;
+            document.getElementById('mfa-enroll-code').value = '';
+            loadMfaStatus();
+        });
+
+        mfaRemoveBtn.addEventListener('click', async () => {
+            if (!confirm('Turn off two-factor authentication? Your password alone will then open client records.')) return;
+            const factor = await verifiedFactor();
+            if (!factor) return loadMfaStatus();
+            const { error } = await supabaseClient.auth.mfa.unenroll({ factorId: factor.id });
+            if (error) { mfaError(error.message); return; }
+            loadMfaStatus();
         });
 
         // New Client modal
