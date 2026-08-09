@@ -86,9 +86,15 @@ fi
 
 echo ""
 echo "About to restore into: $TARGET_URL"
-printf "Type RESTORE to continue: "
-read -r confirm
-[ "$confirm" = "RESTORE" ] || { echo "Aborted."; exit 1; }
+# RESTORE_CONFIRM lets the rehearsal script run unattended; a human typing
+# the command still gets the prompt.
+if [ "${RESTORE_CONFIRM:-}" = "RESTORE" ]; then
+  echo "(confirmed via RESTORE_CONFIRM)"
+else
+  printf "Type RESTORE to continue: "
+  read -r confirm
+  [ "$confirm" = "RESTORE" ] || { echo "Aborted."; exit 1; }
+fi
 
 tapi() { curl -fsS -H "apikey: $TARGET_SERVICE_KEY" -H "Authorization: Bearer $TARGET_SERVICE_KEY" "$@"; }
 
