@@ -1950,8 +1950,14 @@
             "I confirm that I have been provided with verbal and written information about this treatment which includes aftercare and follow up advice.",
             "I agree to follow the aftercare advice and understand this reduces risk of adverse reactions and helps ensure optimum results.",
             "I understand information about me will be treated as confidential and access to it restricted in accordance with the Data Protection Act, unless specific permissions given.",
-            "I consent to my medical records being shared with appropriate medical professionals",
-            "I understand photographs are taken as part of my medical record."
+            "I consent to my medical records being shared with appropriate medical professionals"
+        ];
+
+        // Clinical photography is part of the treatment record. Kept separate
+        // from the optional marketing consents below, so a patient can decline
+        // promotional use without that being confused with their record.
+        const CLINICAL_PHOTO = [
+            "I understand that photographs may be taken as part of my clinical record, to assess, plan and review my treatment, and that these are stored securely with my records."
         ];
 
         const PHOTO_CONSENTS = [
@@ -1994,7 +2000,9 @@
                     { t: 'info', html: 'Any adverse reactions usually occur within a few days of treatment. Botulinum toxin effects are not reversible. They are expected to be temporary in nature and usually resolve spontaneously within weeks. Rarely, symptoms may persist for several months.<br><br>The treatment of the brow, and any area other than frown or crows feet with botulinum toxin are not licensed indications. The product manufacturer has no liability should a complication arise, when this medicine is used for indications that have not been licensed.' },
                     { t: 'info', title: 'Expected Outcome', html: 'Successful treatment should prevent or significantly reduce the expressions causing the lines. Treatment may not cause the expression lines themselves to disappear completely. The expression may not be completely frozen, particularly if extreme effort is exerted to make any expression. Any decision to increase the dose, or repeat treatment, will be made at the discretion of the practitioner, informed by safety and best practice.' },
                     { t: 'checks', k: 'declarations', items: SHARED_DECLARATIONS },
-                    { t: 'checktitle', text: 'On occasion it is helpful to share visual images of our own treatment results. I consent to photographs being published for:' },
+                    { t: 'checktitle', text: 'Photographs as part of your clinical record' },
+                    { t: 'checks', k: 'clinical_photo', items: CLINICAL_PHOTO },
+                    { t: 'checktitle', text: 'OPTIONAL - marketing and educational use. You may leave all of these blank. Declining will not affect your treatment or care in any way, and you can withdraw permission at any time by emailing the clinic. I consent to photographs being published for:' },
                     { t: 'checks', k: 'photo_consents', items: PHOTO_CONSENTS },
                     { t: 'checks', k: 'photo_terms', items: PHOTO_TERMS },
                     { t: 'checktitle', text: 'I have taken the time to read:' },
@@ -2021,7 +2029,9 @@
                     { t: 'info', title: 'Uncommon Side Effects', html: '<ul><li>Infection</li><li>Inflammation</li><li>Skin discoloration</li><li>Infection or skin discoloration may occur within a few days, or weeks to months following treatment.</li><li>Allergic or sensitivity reaction. Symptoms include; itching, rash, red itchy welts, wheezing, asthma symptoms, dizziness or feeling faint. Abscess formation</li><li>Prolonged swelling which may occur early or present after several weeks</li><li>Persistent lumps, nodules or papules</li><li>Acne like formations</li><li>A Foreign body reaction known as ‘granuloma’ presenting as lumps or nodules</li><li>The blood supply to the skin may be interrupted by swelling or inadvertent injection into a vessel, causing pain, skin damage and possible scarring.</li><li>Though extremely rare, transient visual disturbance or permanent blindness has been reported following injectable cosmetic treatment.</li></ul>' },
                     { t: 'info', html: 'Perfect symmetry is not always achievable.<br><br>Correction is expected to last for a period of 6–12 months. The successful outcome varies by degree and how long it lasts varies from one individual to another and cannot be guaranteed.' },
                     { t: 'checks', k: 'declarations', items: ['I understand that whilst I have been advised as to a probable result, this should not be interpreted as a guarantee.'].concat(SHARED_DECLARATIONS) },
-                    { t: 'checktitle', text: 'On occasion it is helpful to share visual images of our own treatment results. I consent to photographs being published for:' },
+                    { t: 'checktitle', text: 'Photographs as part of your clinical record' },
+                    { t: 'checks', k: 'clinical_photo', items: CLINICAL_PHOTO },
+                    { t: 'checktitle', text: 'OPTIONAL - marketing and educational use. You may leave all of these blank. Declining will not affect your treatment or care in any way, and you can withdraw permission at any time by emailing the clinic. I consent to photographs being published for:' },
                     { t: 'checks', k: 'photo_consents', items: PHOTO_CONSENTS },
                     { t: 'checks', k: 'photo_terms', items: PHOTO_TERMS },
                     { t: 'checktitle', text: 'I have taken the time to read:' },
