@@ -27,30 +27,60 @@ the Google account, so one compromised account does not give access to both.
 
 ### 2. Storage destination
 
-No service account is needed. Many Google organisations block service
-account key creation ("An organisation policy that blocks service account
-key creation has been enforced"), so this authorises with a normal login
-instead.
+Download rclone from <https://rclone.org/downloads/> first (a single .exe,
+no installer needed). Then pick one of the options below.
 
-Use a Google account **Rica controls**, not one belonging to an employer or
-other organisation, whose admins may be able to reach its Drive.
+Because the archive is encrypted before it is uploaded, the host cannot read
+it. Choose based on which is least likely to break unattended.
 
-1. Download rclone from <https://rclone.org/downloads/> (a single .exe, no
-   installer needed).
-2. In a terminal, run `rclone config`, then:
-   - `n` for a new remote, name it `gdrive`
-   - storage type: `drive`
-   - leave client_id and client_secret blank
-   - scope: `1` (full access)
-   - leave root_folder_id and service_account_file blank
-   - `n` to advanced config, `y` to use a browser to authorise
-   - sign in and allow access
-3. Create a folder in Drive, for example `GlowByRica Backups`.
-4. Show the config file: `rclone config file` gives its path. Open it and
-   copy the **entire contents** (it will include a `token = {...}` line).
+#### Option A: Backblaze B2 (recommended)
 
-The same steps work for Backblaze B2, Dropbox or OneDrive if you would
-rather not use Drive. Only the remote name changes.
+No OAuth, no consent screens, no tokens that expire. 10 GB free, which is
+far more than these backups need.
+
+1. Create an account at <https://www.backblaze.com/b2/sign-up.html>
+2. Create a **private** bucket, for example `glowbyrica-backups`
+3. App Keys, "Add a New Application Key", restricted to that bucket, with
+   read and write. Copy the keyID and applicationKey (shown once).
+4. `rclone config`: new remote named `b2`, storage type `b2`, paste the
+   keyID as Account ID and applicationKey as Key. Accept the defaults.
+5. Test: `rclone lsd b2:`
+
+Remote value for the secret below: `b2:glowbyrica-backups`
+
+#### Option B: Google Drive
+
+Workable, but Google needs more care:
+
+- Many organisations block service account keys, so use a normal sign-in.
+- rclone's shared client ID is being retired during 2026, so **make your own**
+  or the backup will stop working: <https://rclone.org/drive/#making-your-own-client-id>
+- Use an account **Rica controls**. On an employer or other organisation's
+  account, its admins may be able to reach the Drive.
+
+Making your own client ID, briefly:
+
+1. <https://console.cloud.google.com>, create a project
+2. APIs and Services, Library, enable **Google Drive API**
+3. APIs and Services, OAuth consent screen:
+   - On a Workspace account choose **Internal**. Simplest: no verification,
+     and refresh tokens do not expire.
+   - On a personal Gmail you must choose External, then **publish** the app.
+     Left in "Testing" the refresh token expires after 7 days and the backup
+     breaks weekly.
+4. Credentials, Create Credentials, OAuth client ID, type **Desktop app**.
+   Copy the client ID and client secret.
+5. `rclone config`: new remote named `gdrive`, type `drive`, paste your own
+   client_id and client_secret, scope `1`, browser sign-in.
+6. Create a Drive folder, for example `GlowByRica Backups`.
+
+Remote value for the secret below: `gdrive:GlowByRica Backups`
+
+#### Either way
+
+Show the config file with `rclone config file`, open it, and copy the
+**entire contents**. It contains live credentials, so treat it like a
+password: never commit it or paste it into a chat.
 
 ### 3. Repository secrets
 
