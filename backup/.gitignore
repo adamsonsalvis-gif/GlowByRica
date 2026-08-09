@@ -1,0 +1,5 @@
+# Never commit archives or credentials
+*.gpg
+*.tar.gz
+.env
+backups/

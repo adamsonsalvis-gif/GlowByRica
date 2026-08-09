@@ -1,0 +1,58 @@
+name: Encrypted clinical backup
+
+# Runs daily. Also runnable by hand from the Actions tab, which is how you
+# should test it the first time.
+on:
+  schedule:
+    - cron: '30 2 * * *'   # 02:30 UTC daily
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install rclone
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rclone
+
+      - name: Configure Google Drive
+        run: |
+          mkdir -p ~/.config/rclone
+          # Service account JSON, held as a repository secret
+          printf '%s' '${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}' > ~/gdrive-sa.json
+          cat > ~/.config/rclone/rclone.conf <<CONF
+          [gdrive]
+          type = drive
+          scope = drive
+          service_account_file = /home/runner/gdrive-sa.json
+          root_folder_id = ${{ secrets.GDRIVE_FOLDER_ID }}
+          CONF
+
+      - name: Run backup
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          RCLONE_REMOTE: gdrive:
+          RETAIN_DAYS: '90'
+        run: |
+          chmod +x backup/backup.sh
+          ./backup/backup.sh
+
+      - name: Verify the backup we just made can be decrypted and is intact
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          chmod +x backup/restore.sh
+          archive=$(ls -t backups/*.gpg | head -1)
+          ./backup/restore.sh "$archive" --verify
+
+      # Nothing unencrypted should outlive the job
+      - name: Shred local copies
+        if: always()
+        run: |
+          shred -u backups/*.gpg 2>/dev/null || rm -f backups/*.gpg
+          shred -u ~/gdrive-sa.json 2>/dev/null || rm -f ~/gdrive-sa.json
