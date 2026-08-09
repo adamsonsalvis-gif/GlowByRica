@@ -717,6 +717,16 @@
         }
 
         .cp-info h4 { font-family: "Cinzel", serif; font-size: 0.92rem; margin-bottom: 0.4rem; color: #6B1D1D; }
+
+        /* Safety warnings the patient must not skim past */
+        .cp-info.cp-warn {
+            background: rgba(178,58,58,0.07);
+            border-left: 3px solid #b23a3a;
+            border-radius: 0 8px 8px 0;
+            padding: 0.9rem 1rem;
+        }
+
+        .cp-info.cp-warn h4 { color: #b23a3a; }
         .cp-info ul { list-style: none; margin: 0.4rem 0; }
         .cp-info li { padding-left: 1.25rem; position: relative; margin: 0.25rem 0; }
         .cp-info li::before { content: '✦'; color: #C9A463; position: absolute; left: 0; font-size: 0.8rem; }
@@ -1997,6 +2007,7 @@
                     { t: 'textarea', k: 'material', label: 'Material Information', hint: "Issues or concerns the patient has and how they have been addressed. It may be that 'No additional material information disclosed or identified'." },
                     { t: 'info', title: 'Common side effects associated with treatment with botulinum toxin to the upper face (1%–10% risk)', html: '<ul><li>Eye lid ptosis (a drooping or heaviness of the eyelid, one or both), brow ptosis (heaviness and or lowering of the brow).</li><li>Facial pain</li></ul>' },
                     { t: 'info', title: 'Uncommon side effects (0.1%–1% risk)', html: '<ul><li>Swelling/puffiness around the eyes</li><li>Nausea</li><li>Anxiety</li><li>Dry mouth</li><li>Altered skin sensation, muscle twitching or spasm in the treated area</li><li>Eye pain, dry eyes, tearing, sensitivity to light, blurred vision, strabismus</li><li>Flu like symptoms</li><li>Itching or dry skin</li><li>Muscles not targeted may be effected</li><li>Infection</li></ul><strong>Also reported:</strong><ul><li>Fever</li><li>Tinnitus, vertigo</li><li>Alopecia</li><li>Rash</li></ul><em>*This list is not exhaustive, you may ask for a copy of the patient information leaflet in the pack, or check the Summary of Product Characteristics on-line.</em>' },
+                    { t: 'info', warn: true, title: 'Important: rare risk of iatrogenic botulism', html: 'There are rare reports of iatrogenic botulism. Symptoms include difficulty swallowing, slurred speech, breathing problems, drooping eyelids or facial weakness. These can appear within days, or as late as <strong>four weeks</strong> after treatment.<br><br>If you experience any of these, seek urgent medical attention and contact the clinic.' },
                     { t: 'info', html: 'Any adverse reactions usually occur within a few days of treatment. Botulinum toxin effects are not reversible. They are expected to be temporary in nature and usually resolve spontaneously within weeks. Rarely, symptoms may persist for several months.<br><br>The treatment of the brow, and any area other than frown or crows feet with botulinum toxin are not licensed indications. The product manufacturer has no liability should a complication arise, when this medicine is used for indications that have not been licensed.' },
                     { t: 'info', title: 'Expected Outcome', html: 'Successful treatment should prevent or significantly reduce the expressions causing the lines. Treatment may not cause the expression lines themselves to disappear completely. The expression may not be completely frozen, particularly if extreme effort is exerted to make any expression. Any decision to increase the dose, or repeat treatment, will be made at the discretion of the practitioner, informed by safety and best practice.' },
                     { t: 'checks', k: 'declarations', items: SHARED_DECLARATIONS },
@@ -2163,7 +2174,7 @@
                 } else if (sec.t === 'textarea') {
                     html += `<div class="cp-textarea"><label>${escapeHtml(sec.label)}</label><textarea data-ck="${sec.k}">${escapeHtml(d[sec.k] || '')}</textarea>${sec.hint ? `<div class="cp-hint">${escapeHtml(sec.hint)}</div>` : ''}</div>`;
                 } else if (sec.t === 'info') {
-                    html += `<div class="cp-info">${sec.title ? `<h4>${escapeHtml(sec.title)}</h4>` : ''}${sec.html}</div>`;
+                    html += `<div class="cp-info${sec.warn ? ' cp-warn' : ''}">${sec.title ? `<h4>${escapeHtml(sec.title)}</h4>` : ''}${sec.html}</div>`;
                 } else if (sec.t === 'checktitle') {
                     html += `<div class="cp-check-title">${escapeHtml(sec.text)}</div>`;
                 } else if (sec.t === 'checks') {
