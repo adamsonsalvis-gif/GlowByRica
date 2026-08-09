@@ -19,6 +19,9 @@
 
 set -euo pipefail
 
+# shellcheck source=lib-list.sh
+. "$(dirname "$0")/lib-list.sh"
+
 : "${SUPABASE_URL:?SUPABASE_URL not set}"
 : "${SUPABASE_SERVICE_KEY:?SUPABASE_SERVICE_KEY not set}"
 : "${BACKUP_PASSPHRASE:?BACKUP_PASSPHRASE not set}"
@@ -156,22 +159,20 @@ if printf '%s' "$root_json" | grep -q '"error"\|"statusCode"'; then
   root_json='[]'
   SKIPPED="$SKIPPED $BUCKET"
 fi
-folders="$(printf '%s' "$root_json" | grep -o '{"name":"[^"]*","id":null' | sed 's/{"name":"//; s/","id":null//' || true)"
+folders="$(printf '%s' "$root_json" | names_without_id)"
 
 for f in $folders; do
-  files_json="$(list_folder "$f/")"
-  printf '%s' "$files_json" \
-    | grep -o '{"name":"[^"]*","id":"[^"]*"' \
-    | sed 's/{"name":"//; s/","id":".*//' \
-    | while read -r file; do
-        [ -n "$file" ] && echo "$f/$file" >> "$PHOTO_LIST"
-      done
+  files="$(list_folder "$f/" | names_with_id)"
+  while IFS= read -r file; do
+    [ -n "$file" ] && printf '%s/%s\n' "$f" "$file" >> "$PHOTO_LIST"
+  done <<< "$files"
 done
 
 # Files sitting at the root, if any
-printf '%s' "$root_json" | grep -o '{"name":"[^"]*","id":"[^"]*"' \
-  | sed 's/{"name":"//; s/","id":".*//' \
-  | while read -r file; do [ -n "$file" ] && echo "$file" >> "$PHOTO_LIST"; done
+root_files="$(printf '%s' "$root_json" | names_with_id)"
+while IFS= read -r file; do
+  [ -n "$file" ] && printf '%s\n' "$file" >> "$PHOTO_LIST"
+done <<< "$root_files"
 
 PHOTO_COUNT=$(wc -l < "$PHOTO_LIST" | tr -d ' ')
 echo "    $PHOTO_COUNT photo(s)"

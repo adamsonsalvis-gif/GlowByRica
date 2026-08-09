@@ -96,6 +96,40 @@ NEW_SUM="$(cd "$TMP/out/$NAME" && find tables photos -type f | sort | xargs open
 if [ "$ORIG_SUM" = "$NEW_SUM" ]; then ok "restored files identical to originals"; else bad "restored files differ from originals"; fi
 if grep -q "Jane Doe" "$TMP/out/$NAME/tables/clients.json"; then ok "record content readable after restore"; else bad "record content lost"; fi
 
+echo "Test 6: storage listing survives empty buckets"
+# Regression: grep exits 1 when it matches nothing, and under pipefail that
+# aborted the whole backup as soon as the bucket was empty.
+. ./lib-list.sh
+
+check_parse() { # name, json, expected output
+  local got
+  got="$(printf '%s' "$2" | eval "$4" || echo "__DIED__")"
+  if [ "$got" = "__DIED__" ]; then bad "$1 (command failed)"; return; fi
+  if [ "$got" = "$3" ]; then ok "$1"; else bad "$1 (got '$got', wanted '$3')"; fi
+}
+
+check_parse "empty bucket yields no files"    '[]' '' 'names_with_id'
+check_parse "empty bucket yields no folders"  '[]' '' 'names_without_id'
+check_parse "folders are detected" \
+  '[{"name":"jane-doe","id":null},{"name":"amy-lee","id":null}]' \
+  'jane-doe
+amy-lee' 'names_without_id'
+check_parse "folder listing yields no stray files" \
+  '[{"name":"jane-doe","id":null}]' '' 'names_with_id'
+check_parse "files are detected" \
+  '[{"name":"1-before.jpg","id":"abc","size":10},{"name":"2-after.jpg","id":"def"}]' \
+  '1-before.jpg
+2-after.jpg' 'names_with_id'
+
+# and the loop that consumes them must not trip on empty input either
+if (
+  set -euo pipefail
+  . ./lib-list.sh
+  files="$(printf '[]' | names_with_id)"
+  while IFS= read -r f; do [ -n "$f" ] && echo "$f"; done <<< "$files"
+  exit 0
+) >/dev/null 2>&1; then ok "empty listing loop does not abort"; else bad "empty listing loop aborted"; fi
+
 echo ""
 echo "$PASSES passed, $FAILS failed"
 [ "$FAILS" -eq 0 ]
