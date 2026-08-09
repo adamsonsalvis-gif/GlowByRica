@@ -139,6 +139,10 @@ if [ -n "${RCLONE_REMOTE:-}" ]; then
   rclone copy "$ARCHIVE" "$RCLONE_REMOTE" --no-traverse
   echo "==> Pruning backups older than $RETAIN_DAYS days"
   rclone delete "$RCLONE_REMOTE" --min-age "${RETAIN_DAYS}d" || true
+  # B2 keeps hidden previous versions, so a delete alone does not free the
+  # space. cleanup purges them; it is a harmless no-op on backends that do
+  # not version.
+  rclone cleanup "$RCLONE_REMOTE" 2>/dev/null || true
 else
   echo "==> RCLONE_REMOTE not set, keeping archive locally only"
 fi

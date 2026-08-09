@@ -45,6 +45,10 @@ far more than these backups need.
 4. `rclone config`: new remote named `b2`, storage type `b2`, paste the
    keyID as Account ID and applicationKey as Key. Accept the defaults.
 5. Test: `rclone lsd b2:`
+6. In the bucket's **Lifecycle Settings**, choose "Keep only the last
+   version of the file". B2 otherwise retains every old version forever,
+   which quietly grows the bill. (The backup script also runs
+   `rclone cleanup` for this, belt and braces.)
 
 Remote value for the secret below: `b2:glowbyrica-backups`
 
