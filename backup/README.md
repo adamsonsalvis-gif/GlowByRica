@@ -112,7 +112,19 @@ verifies its own archive. Confirm a `.gpg` file appears in the Drive folder.
 
 ## Restoring
 
-Download an archive from Drive, then:
+### Getting an archive back
+
+Fetch it with rclone, not the provider's website. B2 refuses to serve
+server-side-encrypted files through the browser ("For security purposes,
+encrypted files are not downloaded via the web user interface"), and rclone
+handles that transparently.
+
+```bash
+rclone ls b2:glowbyrica-backups                                   # what is there
+rclone copy b2:glowbyrica-backups ./backup --include "*.gpg" --max-age 2d -P
+```
+
+Then:
 
 ```bash
 export BACKUP_PASSPHRASE='...'
