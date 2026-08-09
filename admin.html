@@ -1348,8 +1348,16 @@
 
                         <div id="mfa-enroll-area" style="display:none;">
                             <p style="font-size:0.85rem; margin-bottom:0.8rem;">
-                                Scan this with Google Authenticator, Authy, or your phone's
-                                built-in authenticator, then enter the 6-digit code it shows.
+                                Scan this with a standard authenticator app - your iPhone's
+                                built-in Passwords app, Google Authenticator, Microsoft
+                                Authenticator, Authy, 1Password or Bitwarden - then enter the
+                                6-digit code it shows. (Enterprise apps such as PingID will not
+                                accept this code; they only pair with their own company system.)
+                            </p>
+                            <p style="font-size:0.85rem; margin-bottom:0.8rem;">
+                                On the same device you are reading this on, tap
+                                <a id="mfa-uri-link" href="#" style="color:#6B1D1D; font-weight:600;">add to authenticator app</a>
+                                instead of scanning.
                             </p>
                             <img id="mfa-qr" alt="Authenticator QR code"
                                  style="width:190px; height:190px; background:#fff; border:1px solid rgba(58,13,13,0.15); border-radius:8px; padding:6px;">
@@ -2959,6 +2967,9 @@
             pendingFactorId = data.id;
             document.getElementById('mfa-qr').src = data.totp.qr_code;
             document.getElementById('mfa-secret').textContent = data.totp.secret;
+            // otpauth:// hands off straight to the authenticator app, which is
+            // easier than scanning when setting up on the same device
+            document.getElementById('mfa-uri-link').href = data.totp.uri;
             mfaEnrollArea.style.display = 'block';
             mfaStartBtn.style.display = 'none';
         });
