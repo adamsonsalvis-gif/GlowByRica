@@ -27,6 +27,29 @@ case "$TARGET_URL" in
   *kychrharobhmyzuywvpm*)
     echo "REFUSING: that is the live project. Rehearse against a scratch one." >&2
     exit 1 ;;
+  *'<'*|*'>'*)
+    echo "TARGET_URL still contains a placeholder: $TARGET_URL" >&2
+    echo "Replace <scratch-ref> with the scratch project's real ref, e.g." >&2
+    echo "  export TARGET_URL='https://abcdefghijklmnop.supabase.co'" >&2
+    exit 1 ;;
+  https://*.supabase.co|https://*.supabase.co/) : ;;
+  *)
+    echo "TARGET_URL does not look like a Supabase project URL: $TARGET_URL" >&2
+    echo "Expected https://<ref>.supabase.co (Settings, API, Project URL)" >&2
+    exit 1 ;;
+esac
+TARGET_URL="${TARGET_URL%/}"   # a trailing slash breaks the request paths
+
+# Fail early with a clear message rather than a curl hostname error later
+probe_code="$(curl -sS -o /dev/null -w '%{http_code}' \
+  -H "apikey: $TARGET_SERVICE_KEY" -H "Authorization: Bearer $TARGET_SERVICE_KEY" \
+  "$TARGET_URL/rest/v1/clients?select=id&limit=1" || echo "000")"
+case "$probe_code" in
+  200) ;;
+  000) echo "Cannot reach $TARGET_URL - check the URL is right." >&2; exit 1 ;;
+  401|403) echo "Scratch project rejected the key (HTTP $probe_code) - use its service_role key." >&2; exit 1 ;;
+  404) echo "Reached $TARGET_URL but 'clients' is missing - run supabase/ALL-IN-ORDER.sql there first." >&2; exit 1 ;;
+  *) echo "Unexpected response from scratch project (HTTP $probe_code)" >&2; exit 1 ;;
 esac
 
 PASSES=0; FAILS=0
