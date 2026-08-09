@@ -18,25 +18,22 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq rclone
 
-      - name: Configure Google Drive
+      - name: Configure storage destination
         run: |
           mkdir -p ~/.config/rclone
-          # Service account JSON, held as a repository secret
-          printf '%s' '${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}' > ~/gdrive-sa.json
-          cat > ~/.config/rclone/rclone.conf <<CONF
-          [gdrive]
-          type = drive
-          scope = drive
-          service_account_file = /home/runner/gdrive-sa.json
-          root_folder_id = ${{ secrets.GDRIVE_FOLDER_ID }}
-          CONF
+          # Whole rclone.conf as one secret. Works with a normal Google login
+          # (no service account key needed, so org policies blocking key
+          # creation are not an obstacle), and equally with B2, Dropbox,
+          # OneDrive or anything else rclone supports.
+          printf '%s' '${{ secrets.RCLONE_CONFIG }}' > ~/.config/rclone/rclone.conf
+          chmod 600 ~/.config/rclone/rclone.conf
 
       - name: Run backup
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
-          RCLONE_REMOTE: gdrive:
+          RCLONE_REMOTE: ${{ secrets.RCLONE_REMOTE }}
           RETAIN_DAYS: '90'
         run: |
           chmod +x backup/backup.sh
@@ -50,9 +47,9 @@ jobs:
           archive=$(ls -t backups/*.gpg | head -1)
           ./backup/restore.sh "$archive" --verify
 
-      # Nothing unencrypted should outlive the job
+      # Nothing unencrypted, and no credentials, should outlive the job
       - name: Shred local copies
         if: always()
         run: |
           shred -u backups/*.gpg 2>/dev/null || rm -f backups/*.gpg
-          shred -u ~/gdrive-sa.json 2>/dev/null || rm -f ~/gdrive-sa.json
+          shred -u ~/.config/rclone/rclone.conf 2>/dev/null || rm -f ~/.config/rclone/rclone.conf

@@ -25,18 +25,32 @@ Generate a long random passphrase and store it in a password manager. **If
 this is lost, the backups are unreadable.** Store it somewhere separate from
 the Google account, so one compromised account does not give access to both.
 
-### 2. Google Drive destination
+### 2. Storage destination
 
-1. In the Google Cloud console, create a project and enable the **Google Drive API**.
-2. Create a **service account**, then create a **JSON key** for it and download it.
-3. In Google Drive, create a folder, for example `GlowByRica Backups`.
-4. Share that folder with the service account's email address (it looks like
-   `name@project.iam.gserviceaccount.com`) with **Editor** access.
-5. Open the folder and copy its ID from the address bar:
-   `https://drive.google.com/drive/folders/<THIS_PART>`
+No service account is needed. Many Google organisations block service
+account key creation ("An organisation policy that blocks service account
+key creation has been enforced"), so this authorises with a normal login
+instead.
 
-Use a Drive account that only Rica controls, and do not share the folder with
-anyone else. It holds medical records.
+Use a Google account **Rica controls**, not one belonging to an employer or
+other organisation, whose admins may be able to reach its Drive.
+
+1. Download rclone from <https://rclone.org/downloads/> (a single .exe, no
+   installer needed).
+2. In a terminal, run `rclone config`, then:
+   - `n` for a new remote, name it `gdrive`
+   - storage type: `drive`
+   - leave client_id and client_secret blank
+   - scope: `1` (full access)
+   - leave root_folder_id and service_account_file blank
+   - `n` to advanced config, `y` to use a browser to authorise
+   - sign in and allow access
+3. Create a folder in Drive, for example `GlowByRica Backups`.
+4. Show the config file: `rclone config file` gives its path. Open it and
+   copy the **entire contents** (it will include a `token = {...}` line).
+
+The same steps work for Backblaze B2, Dropbox or OneDrive if you would
+rather not use Drive. Only the remote name changes.
 
 ### 3. Repository secrets
 
@@ -47,11 +61,15 @@ In GitHub: Settings, Secrets and variables, Actions. Add:
 | `SUPABASE_URL` | `https://kychrharobhmyzuywvpm.supabase.co` |
 | `SUPABASE_SERVICE_KEY` | Supabase, Settings, API, `service_role` key |
 | `BACKUP_PASSPHRASE` | The passphrase from step 1 |
-| `GDRIVE_SERVICE_ACCOUNT_JSON` | Entire contents of the JSON key file |
-| `GDRIVE_FOLDER_ID` | The folder ID from step 2 |
+| `RCLONE_CONFIG` | Entire contents of rclone.conf from step 2 |
+| `RCLONE_REMOTE` | `gdrive:GlowByRica Backups` (remote name, colon, folder) |
 
 The `service_role` key bypasses all security rules. It belongs only in
 GitHub secrets, never in the website code.
+
+Because the archive is encrypted before upload, whoever hosts the files
+cannot read them. The passphrase is what protects the contents; the storage
+account only controls who can obtain the file at all.
 
 ### 4. First run
 
