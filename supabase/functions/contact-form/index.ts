@@ -109,28 +109,57 @@ Deno.serve(async (req) => {
     console.error("contact-form: db insert failed", dbError);
   }
 
-  const notifyHtml = `
-    <div style="font-family: Georgia, serif; color:#3A0D0D;">
-      <h2 style="color:#C9A463;">New enquiry from the website</h2>
-      <p><strong>Name:</strong> ${escapeHtml(name)}</p>
-      <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-      <p><strong>Phone:</strong> ${escapeHtml(phone)}</p>
-      <p><strong>Treatment:</strong> ${escapeHtml(treatment)}</p>
-      <p><strong>Preferred time:</strong> ${escapeHtml(preferred_time || "Not specified")}</p>
-      <p><strong>Message:</strong><br>${escapeHtml(message).replace(/\n/g, "<br>")}</p>
-    </div>`;
+  // Shared branded wrapper (table-based for compatibility with Outlook/older
+  // clients, not just modern webmail). `bodyHtml` is dropped into the cream
+  // card; `showLogo` puts the GLOW mark centred beneath the signature.
+  const LOGO_URL = "https://glowbyrica.com/images/GLOW.png";
+  const emailShell = (bodyHtml: string, showLogo: boolean) => `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAF3EB; padding:32px 16px;">
+      <tr><td align="center">
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px; width:100%; background-color:#FFFFFF; border-radius:14px; overflow:hidden; font-family: Georgia, 'Times New Roman', serif;">
+          <tr><td style="height:6px; background-color:#C9A463; line-height:6px; font-size:0;">&nbsp;</td></tr>
+          <tr><td style="padding:36px 40px 8px 40px; text-align:center;">
+            <span style="color:#C9A463; font-size:1.1rem; letter-spacing:0.3em;">✦</span>
+          </td></tr>
+          <tr><td style="padding:0 40px 32px 40px; color:#3A0D0D; font-size:0.95rem; line-height:1.7;">
+            ${bodyHtml}
+          </td></tr>
+          ${showLogo ? `
+          <tr><td style="padding:0 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+              <td style="border-top:1px solid rgba(201,164,99,0.35); line-height:1px; font-size:0;">&nbsp;</td>
+            </tr></table>
+          </td></tr>
+          <tr><td style="padding:24px 40px 36px 40px; text-align:center;">
+            <img src="${LOGO_URL}" alt="Glow By Rica" width="110" style="width:110px; max-width:110px; height:auto; display:inline-block;">
+            <p style="margin:14px 0 0 0; font-family: Arial, sans-serif; font-size:0.7rem; letter-spacing:0.05em; color:rgba(58,13,13,0.55);">
+              Phenix Salon Suites, Derby City Centre &nbsp;·&nbsp; <a href="https://glowbyrica.com" style="color:#C9A463; text-decoration:none;">glowbyrica.com</a>
+            </p>
+          </td></tr>` : ""}
+        </table>
+      </td></tr>
+    </table>`;
+
+  const notifyHtml = emailShell(`
+      <h2 style="color:#C9A463; font-size:1.15rem; margin:0 0 1rem 0; text-align:center;">New enquiry from the website</h2>
+      <p style="margin:0 0 0.5rem 0;"><strong>Name:</strong> ${escapeHtml(name)}</p>
+      <p style="margin:0 0 0.5rem 0;"><strong>Email:</strong> ${escapeHtml(email)}</p>
+      <p style="margin:0 0 0.5rem 0;"><strong>Phone:</strong> ${escapeHtml(phone)}</p>
+      <p style="margin:0 0 0.5rem 0;"><strong>Treatment:</strong> ${escapeHtml(treatment)}</p>
+      <p style="margin:0 0 0.5rem 0;"><strong>Preferred time:</strong> ${escapeHtml(preferred_time || "Not specified")}</p>
+      <p style="margin:1rem 0 0 0;"><strong>Message:</strong><br>${escapeHtml(message).replace(/\n/g, "<br>")}</p>
+  `, false);
 
   const firstName = name.split(/\s+/)[0] || name;
 
-  const replyHtml = `
-    <div style="font-family: Georgia, serif; color:#3A0D0D; max-width:480px; margin:0 auto; line-height:1.6;">
-      <p>Hi ${escapeHtml(firstName)},</p>
-      <p>Thank you for contacting Glow by Rica ✨</p>
-      <p>We've received your enquiry and will be in touch within 24 hours.</p>
-      <p>Glow by Rica is a nurse-led aesthetics clinic based at Phenix Salon Suites in Derby City Centre.</p>
-      <p>Our approach is consultation-led, with treatments tailored to you and focused on natural-looking results.</p>
-      <p style="margin-top:2rem;">Warmly,<br><strong style="color:#C9A463;">Rica</strong><br>Registered Nurse | Glow by Rica</p>
-    </div>`;
+  const replyHtml = emailShell(`
+      <h1 style="color:#3A0D0D; font-size:1.3rem; font-weight:normal; margin:0 0 1.2rem 0; text-align:center;">Thank you for contacting<br>Glow by Rica ✨</h1>
+      <p style="margin:0 0 1rem 0;">Hi ${escapeHtml(firstName)},</p>
+      <p style="margin:0 0 1rem 0;">We've received your enquiry and will be in touch within 24 hours.</p>
+      <p style="margin:0 0 1rem 0;">Glow by Rica is a nurse-led aesthetics clinic based at Phenix Salon Suites in Derby City Centre.</p>
+      <p style="margin:0 0 1.6rem 0;">Our approach is consultation-led, with treatments tailored to you and focused on natural-looking results.</p>
+      <p style="margin:0;">Warmly,<br><strong style="color:#C9A463;">Rica</strong><br>Registered Nurse | Glow by Rica</p>
+  `, true);
 
   const [notifyRes, replyRes] = await Promise.all([
     sendEmail(NOTIFY_EMAIL, `New enquiry - ${name}`, notifyHtml, email),
