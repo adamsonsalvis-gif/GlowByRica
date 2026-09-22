@@ -1414,6 +1414,8 @@
             <input type="time" id="appt-time">
             <label>Price (£, optional)</label>
             <input type="number" id="appt-price" min="0" step="0.01">
+            <label>Client Email (optional — sends a booking confirmation)</label>
+            <input type="email" id="appt-email" placeholder="client@example.com">
             <div class="modal-actions">
                 <button class="btn btn-outline" id="cancel-appointment-modal">Cancel</button>
                 <button class="btn" id="save-appointment">Save</button>
@@ -1912,16 +1914,33 @@
             appointmentModal.classList.remove('active');
         });
 
+        // Prefill the email field from an existing client record when the
+        // typed name matches one — saves retyping, never overwrites a value
+        // Rica has already typed in herself.
+        document.getElementById('appt-client-name').addEventListener('blur', async function() {
+            const name = this.value.trim();
+            const emailField = document.getElementById('appt-email');
+            if (!name || emailField.value.trim()) return;
+            const { data } = await supabaseClient.from('clients').select('email').ilike('name', name).maybeSingle();
+            if (data && data.email) emailField.value = data.email;
+        });
+
         document.getElementById('save-appointment').addEventListener('click', async () => {
             const client_name = document.getElementById('appt-client-name').value.trim();
             const treatment = document.getElementById('appt-treatment').value.trim();
             const appointment_date = document.getElementById('appt-date').value;
             const appointment_time = document.getElementById('appt-time').value;
             const priceVal = document.getElementById('appt-price').value;
+            const client_email = document.getElementById('appt-email').value.trim();
             const errorEl = document.getElementById('appointment-error');
 
             if (!client_name || !treatment || !appointment_date || !appointment_time) {
                 errorEl.textContent = 'Please fill in client, treatment, date and time.';
+                errorEl.classList.add('active');
+                return;
+            }
+            if (client_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(client_email)) {
+                errorEl.textContent = 'That email address doesn\'t look right.';
                 errorEl.classList.add('active');
                 return;
             }
@@ -1944,9 +1963,26 @@
             document.getElementById('appt-date').value = '';
             document.getElementById('appt-time').value = '';
             document.getElementById('appt-price').value = '';
+            document.getElementById('appt-email').value = '';
             loadDashboard();
             loadAgenda();
             renderCalendar();
+
+            // Confirmation email is a nice-to-have on top of a saved
+            // appointment — never let it block or undo the booking above.
+            // The modal is already closed by this point, so feedback goes
+            // via alert() (same pattern used for delete confirmations).
+            if (client_email) {
+                try {
+                    const { error: fnError } = await supabaseClient.functions.invoke('appointment-confirmation', {
+                        body: { name: client_name, email: client_email, treatment, appointment_date, appointment_time }
+                    });
+                    if (fnError) throw fnError;
+                } catch (err) {
+                    console.error('appointment-confirmation failed:', err);
+                    alert(`Appointment saved, but the confirmation email to ${client_email} could not be sent.`);
+                }
+            }
         });
 
         // ==================== Consent form engine ====================
