@@ -1,0 +1,7 @@
+# Only needed if you ever deploy via the Supabase CLI (`supabase functions
+# deploy`). If you're deploying through the dashboard's Edge Functions UI
+# instead, this file isn't read - just untick "Enforce JWT verification"
+# for contact-form there instead.
+
+[functions.contact-form]
+verify_jwt = false

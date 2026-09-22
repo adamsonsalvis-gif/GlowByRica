@@ -1062,18 +1062,26 @@
 
         .dt-slots { margin-top: 0.8rem; border-top: 1px solid rgba(201,164,99,0.25); padding-top: 0.8rem; }
         .dt-slots-title { font-size: 0.75rem; color: rgba(230,220,203,0.8); margin-bottom: 0.5rem; }
-        .dt-slot-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+        .dt-slot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 
         .dt-slot {
-            padding: 0.4rem 0;
+            padding: 0.65rem 0.3rem;
             text-align: center;
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             border: 1px solid rgba(201,164,99,0.4);
             border-radius: 6px;
             color: #E6DCCB;
             cursor: pointer;
             background: none;
             font-family: "Quicksand", sans-serif;
+            line-height: 1.4;
+        }
+
+        .dt-slot .dt-slot-sub {
+            display: block;
+            font-size: 0.65rem;
+            color: rgba(230,220,203,0.65);
+            margin-top: 0.15rem;
         }
 
         .dt-slot:hover { background: rgba(201,164,99,0.2); }
@@ -1083,6 +1091,7 @@
             cursor: default;
             text-decoration: line-through;
         }
+        .dt-slot.booked .dt-slot-sub { color: rgba(230,220,203,0.2); }
         .dt-slot.booked:hover { background: none; }
 
         .dt-loading { grid-column: 1 / -1; text-align: center; color: rgba(230,220,203,0.6); font-size: 0.8rem; padding: 0.8rem 0; }
@@ -1675,7 +1684,7 @@
                 <div class="contact-form-block">
                     <h3>Send a Message</h3>
                     <p style="color:#E6DCCB; font-size:0.88rem; margin-bottom:1rem;">Leave a message and we'll get back to you as soon as possible.</p>
-                    <form class="contact-form" id="contactForm" action="https://formspree.io/f/mnjkqryo" method="POST">
+                    <form class="contact-form" id="contactForm" action="https://kychrharobhmyzuywvpm.supabase.co/functions/v1/contact-form" method="POST">
                         <input type="text" name="name" placeholder="Your Name *" required>
                         <input type="email" name="email" placeholder="Your Email *" required>
                         <input type="tel" name="phone" placeholder="Your Phone Number *" required>
@@ -1760,8 +1769,15 @@
         const hiddenInput = document.getElementById('dtValue');
         if (!trigger) return;
 
-        const SLOT_HOURS = [];
-        for (let h = 9; h <= 21; h++) SLOT_HOURS.push(h); // 9:00 .. 21:00 starts (last ends 22:00)
+        // Clients pick a time-of-day period rather than an exact hour; Rica confirms
+        // the precise time when she gets in touch. Each period still maps to the
+        // underlying hourly slots so we can tell when a whole period is booked out.
+        const PERIODS = [
+            { key: 'Morning',   label: 'Morning',   sub: '9am – 12pm', hours: [9, 10, 11] },
+            { key: 'Afternoon', label: 'Afternoon', sub: '12pm – 5pm', hours: [12, 13, 14, 15, 16] },
+            { key: 'Evening',   label: 'Evening',   sub: '5pm – 9pm',  hours: [17, 18, 19, 20, 21] }
+        ];
+        const SLOT_HOURS = PERIODS.flatMap(p => p.hours); // 9:00 .. 21:00 starts (last ends 22:00)
 
         const now = new Date();
         let viewYear = now.getFullYear();
@@ -1859,23 +1875,23 @@
 
             const d = new Date(dateStr + 'T00:00:00');
             const nice = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-            slotsTitle.textContent = `Available times — ${nice}`;
+            slotsTitle.textContent = `Preferred time of day — ${nice}`;
             slotGrid.innerHTML = '';
 
             const taken = bookedMap[dateStr] || new Set();
-            SLOT_HOURS.forEach(h => {
-                const t = `${pad(h)}:00`;
+            PERIODS.forEach(period => {
+                const periodFull = period.hours.every(h => taken.has(`${pad(h)}:00`));
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'dt-slot';
-                btn.textContent = t;
-                if (taken.has(t)) {
+                btn.innerHTML = `${period.label}<span class="dt-slot-sub">${period.sub}</span>`;
+                if (periodFull) {
                     btn.classList.add('booked');
                     btn.disabled = true;
                 } else {
                     btn.addEventListener('click', () => {
-                        hiddenInput.value = `${nice}, ${t}`;
-                        trigger.textContent = `${nice}, ${t}`;
+                        hiddenInput.value = `${nice}, ${period.label}`;
+                        trigger.textContent = `${nice}, ${period.label}`;
                         trigger.classList.add('selected');
                         closePopup();
                     });
