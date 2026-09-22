@@ -60,14 +60,16 @@ function sendEmail(to: string, subject: string, html: string, replyTo?: string) 
   });
 }
 
-function formatNiceDateTime(dateStr: string, timeStr: string): string {
+function formatNiceDate(dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00`);
-  const nice = d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
+
+function formatNiceTime(timeStr: string): string {
   const [h, m] = timeStr.split(":").map(Number);
   const period = h >= 12 ? "pm" : "am";
   const hour12 = ((h + 11) % 12) + 1;
-  const time = m ? `${hour12}:${String(m).padStart(2, "0")}${period}` : `${hour12}${period}`;
-  return `${nice} at ${time}`;
+  return m ? `${hour12}:${String(m).padStart(2, "0")}${period}` : `${hour12}${period}`;
 }
 
 Deno.serve(async (req) => {
@@ -119,7 +121,8 @@ Deno.serve(async (req) => {
   }
 
   const firstName = name.split(/\s+/)[0] || name;
-  const niceWhen = formatNiceDateTime(appointment_date, appointment_time);
+  const niceDate = formatNiceDate(appointment_date);
+  const niceTime = formatNiceTime(appointment_time);
   const LOGO_URL = "https://glowbyrica.com/images/GLOW.png";
 
   const html = `
@@ -131,17 +134,24 @@ Deno.serve(async (req) => {
             <span style="color:#C9A463; font-size:1.1rem; letter-spacing:0.3em;">✦</span>
           </td></tr>
           <tr><td style="padding:0 40px 32px 40px; color:#3A0D0D; font-size:0.95rem; line-height:1.7;">
-            <h1 style="color:#3A0D0D; font-size:1.3rem; font-weight:normal; margin:0 0 1.2rem 0; text-align:center;">Your appointment is confirmed</h1>
             <p style="margin:0 0 1rem 0;">Hi ${escapeHtml(firstName)},</p>
-            <p style="margin:0 0 1rem 0;">This confirms your appointment with Glow by Rica:</p>
+            <p style="margin:0 0 1.4rem 0;">Your consultation with Glow by Rica is confirmed. ✨</p>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAF3EB; border-radius:8px; margin:0 0 1.4rem 0;">
-              <tr><td style="padding:16px 20px;">
-                <p style="margin:0 0 0.4rem 0;"><strong>Treatment:</strong> ${escapeHtml(treatment)}</p>
-                <p style="margin:0;"><strong>When:</strong> ${escapeHtml(niceWhen)}</p>
+              <tr><td style="padding:18px 20px;">
+                <p style="margin:0 0 0.6rem 0; color:#C9A463; font-family: Arial, sans-serif; font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;">Appointment details</p>
+                <p style="margin:0 0 0.3rem 0;"><strong>Date:</strong> ${escapeHtml(niceDate)}</p>
+                <p style="margin:0 0 0.3rem 0;"><strong>Time:</strong> ${escapeHtml(niceTime)}</p>
+                <p style="margin:0;"><strong>Appointment:</strong> ${escapeHtml(treatment)}</p>
               </td></tr>
             </table>
-            <p style="margin:0 0 1rem 0;">Glow by Rica is based at Phenix Salon Suites, Derby City Centre. If you need to reschedule or cancel, please let us know at least 24 hours in advance - see our <a href="https://glowbyrica.com/terms.html" style="color:#C9A463;">Terms &amp; Conditions</a> for our cancellation policy.</p>
-            <p style="margin:0;">Warmly,<br><strong style="color:#C9A463;">Rica</strong><br>Registered Nurse | Glow by Rica</p>
+            <p style="margin:0 0 1rem 0;">During your consultation, we'll take the time to discuss your concerns, what you'd like to achieve, and whether treatment may be suitable for you.</p>
+            <p style="margin:0 0 1rem 0;">You'll be asked to complete a short medical history form when you arrive.</p>
+            <p style="margin:0 0 1.4rem 0;">There is no obligation to proceed with treatment following your consultation.</p>
+            <p style="margin:0 0 0.6rem 0; color:#C9A463; font-family: Arial, sans-serif; font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;">Finding the clinic</p>
+            <p style="margin:0 0 1.4rem 0;">Glow by Rica<br>Suite 115, Phenix Salon<br>Springwell Square<br>Derby, DE1 1FB</p>
+            <p style="margin:0 0 1.4rem 0;">If you need to cancel or reschedule your consultation, please let us know at least 24 hours before your appointment.</p>
+            <p style="margin:0 0 1.4rem 0;">We look forward to welcoming you to Glow by Rica.</p>
+            <p style="margin:0;">Warmly,<br><strong style="color:#C9A463;">Rica</strong><br>Registered Nurse<br>Glow by Rica</p>
           </td></tr>
           <tr><td style="padding:0 40px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -158,7 +168,7 @@ Deno.serve(async (req) => {
       </td></tr>
     </table>`;
 
-  const emailRes = await sendEmail(email, "Your appointment is confirmed - Glow by Rica", html, "rica@glowbyrica.com");
+  const emailRes = await sendEmail(email, "Your consultation is confirmed - Glow by Rica", html, "rica@glowbyrica.com");
   if (!emailRes.ok) {
     console.error("appointment-confirmation: email failed", await emailRes.text());
     return new Response(JSON.stringify({ error: "Could not send email" }), { status: 502, headers });
