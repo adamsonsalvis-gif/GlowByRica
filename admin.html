@@ -534,6 +534,23 @@
 
         .appt-actions .icon-btn { margin-right: 0; }
 
+        /* The calendar's side panel is narrow, so the buttons go on their own line
+           under the appointment (indented to line up with the name) rather than
+           squeezing the text and spilling out of the card. */
+        .agenda-item { flex-wrap: wrap; }
+        .agenda-details { flex: 1; min-width: 0; }
+        .agenda-item .appt-actions {
+            flex-basis: 100%;
+            margin-left: calc(55px + 0.8rem);
+            padding-top: 0.2rem;
+        }
+
+        /* Same idea in the client profile: details and status on the first line,
+           buttons below, wrapping cleanly on a phone. */
+        .appt-row { flex-wrap: wrap; gap: 0.4rem 0.6rem; }
+        .appt-row > div:first-child { flex: 1; min-width: 0; }
+        .appt-row .appt-actions { order: 3; flex-basis: 100%; margin-left: 0; }
+
         .resched-current {
             font-size: 0.82rem;
             color: #6B1D1D;
@@ -3199,7 +3216,7 @@
             appts.forEach(a => apptCache.set(a.id, a));
             apptsEl.innerHTML = appts.length
                 ? appts.map(a => `
-                    <div class="list-row" style="gap:0.6rem;">
+                    <div class="list-row appt-row">
                         <div><strong>${escapeHtml(a.treatment)}</strong><div class="meta">${formatDate(a.appointment_date)} · ${formatTime(a.appointment_time)}</div></div>
                         ${apptActionsHtml(a)}
                         <span class="status-pill ${statusPillClass[a.status] || 'status-pending'}">${statusLabel[a.status] || a.status}</span>
