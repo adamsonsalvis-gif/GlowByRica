@@ -2033,7 +2033,9 @@
 
             const { error } = await supabaseClient.from('appointments').insert({
                 client_name, treatment, appointment_date, appointment_time,
-                price: priceVal ? Number(priceVal) : null
+                price: priceVal ? Number(priceVal) : null,
+                // Kept so a later reschedule can email the client without asking again
+                client_email: client_email || null
             });
 
             if (error) {
@@ -2096,22 +2098,28 @@
             document.getElementById('resched-reason').value = '';
             document.getElementById('reschedule-error').classList.remove('active');
 
-            // Appointments don't store an email, so look the client up by name.
-            // If we find one, tick "email the client" by default; if not, leave it
-            // unticked and let Rica type an address if she wants to send one.
+            // Use the email saved when the appointment was booked. Appointments made
+            // before that was stored fall back to the client's profile; if neither
+            // has one, leave the box unticked and let Rica type an address if she
+            // wants to send one (it is then saved on the appointment for next time).
             const sendBox = document.getElementById('resched-send');
             const emailField = document.getElementById('resched-email');
             sendBox.checked = false;
             emailField.value = '';
-            supabaseClient.from('clients').select('email').eq('name', a.client_name).maybeSingle()
-                .then(({ data }) => {
-                    // The dialog may have been closed or reopened for someone else meanwhile
-                    if (reschedulingId !== id) return;
-                    if (data && data.email) {
-                        emailField.value = data.email;
-                        sendBox.checked = true;
-                    }
-                });
+            if (a.client_email) {
+                emailField.value = a.client_email;
+                sendBox.checked = true;
+            } else {
+                supabaseClient.from('clients').select('email').eq('name', a.client_name).maybeSingle()
+                    .then(({ data }) => {
+                        // The dialog may have been closed or reopened for someone else meanwhile
+                        if (reschedulingId !== id) return;
+                        if (data && data.email) {
+                            emailField.value = data.email;
+                            sendBox.checked = true;
+                        }
+                    });
+            }
             rescheduleModal.classList.add('active');
         }
 
@@ -2167,8 +2175,13 @@
                 const note = `Rescheduled on ${new Date().toLocaleDateString('en-GB')} from ${formatDate(a.appointment_date)} ${formatTime(a.appointment_time)}${reason ? ' - ' + reason : ''}.`;
                 const notes = a.notes ? `${a.notes}\n${note}` : note;
 
+                const changes = { appointment_date: date, appointment_time: time, notes };
+                // An address typed here is remembered on the appointment, so it
+                // is already filled in the next time this one is moved
+                if (sendEmail && clientEmail !== a.client_email) changes.client_email = clientEmail;
+
                 const { error } = await supabaseClient.from('appointments')
-                    .update({ appointment_date: date, appointment_time: time, notes })
+                    .update(changes)
                     .eq('id', a.id);
                 if (error) {
                     errorEl.textContent = error.message;
@@ -2985,7 +2998,7 @@
             const [formsRes, apptsRes, clientRes] = await Promise.all([
                 supabaseClient.from('consent_records').select('id, template_key, created_at')
                     .eq('client_name', name).order('created_at', { ascending: false }),
-                supabaseClient.from('appointments').select('id, client_name, treatment, appointment_date, appointment_time, status, notes')
+                supabaseClient.from('appointments').select('id, client_name, client_email, treatment, appointment_date, appointment_time, status, notes')
                     .eq('client_name', name).order('appointment_date', { ascending: false }).limit(10),
                 supabaseClient.from('clients').select('phone, email').eq('name', name).maybeSingle()
             ]);
