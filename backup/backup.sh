@@ -174,15 +174,40 @@ while IFS= read -r file; do
   [ -n "$file" ] && printf '%s\n' "$file" >> "$PHOTO_LIST"
 done <<< "$root_files"
 
+LISTED_COUNT=$(wc -l < "$PHOTO_LIST" | tr -d ' ')
+echo "    storage listing found $LISTED_COUNT photo(s)"
+
+# Second source: the database records the path of every photo it knows about.
+# Merging the two means one of them breaking can no longer silently drop
+# photos from the backup - which is exactly how this once went wrong, with the
+# listing parser returning nothing while the backup still reported success.
+paths_from_table < "$STAGE/tables/client_photos.json" >> "$PHOTO_LIST"
+sort -u "$PHOTO_LIST" -o "$PHOTO_LIST"
+
+DB_PHOTO_ROWS="$(count_db_photo_rows < "$STAGE/tables/client_photos.json")"
 PHOTO_COUNT=$(wc -l < "$PHOTO_LIST" | tr -d ' ')
-echo "    $PHOTO_COUNT photo(s)"
+echo "    database lists $DB_PHOTO_ROWS photo(s); $PHOTO_COUNT to back up in total"
+if [ "$LISTED_COUNT" -lt "$DB_PHOTO_ROWS" ]; then
+  echo "::warning::Storage listing found $LISTED_COUNT photo(s) but the database lists $DB_PHOTO_ROWS. Backed up using the database's list; the storage listing may need attention."
+fi
 
 echo "==> Downloading photos"
+# Any photo we know about but cannot fetch is a hole in the backup. Fail the
+# run rather than quietly produce an archive that looks complete but is not.
+MISSING=0
 while read -r p; do
   [ -z "$p" ] && continue
   mkdir -p "$STAGE/photos/$(dirname "$p")"
-  api "$SUPABASE_URL/storage/v1/object/$BUCKET/$p" -o "$STAGE/photos/$p"
+  if ! api "$SUPABASE_URL/storage/v1/object/$BUCKET/$p" -o "$STAGE/photos/$p"; then
+    MISSING=$((MISSING + 1))
+  fi
 done < "$PHOTO_LIST"
+if [ "$MISSING" -gt 0 ]; then
+  echo "ERROR: $MISSING of $PHOTO_COUNT photo(s) could not be downloaded from storage." >&2
+  echo "       Not producing a backup that silently omits them. If a photo was" >&2
+  echo "       deleted from storage by hand, remove its row from client_photos." >&2
+  exit 1
+fi
 
 echo "==> Writing manifest"
 {
@@ -215,7 +240,11 @@ echo "    $ARCHIVE ($SIZE bytes)"
 
 if [ -n "${RCLONE_REMOTE:-}" ]; then
   echo "==> Uploading to $RCLONE_REMOTE"
-  rclone copy "$ARCHIVE" "$RCLONE_REMOTE" --no-traverse
+  # B2 occasionally answers 503 "no tomes available" for a minute or two. That
+  # is its way of saying "retry", and rclone's default of 3 quick attempts is
+  # not enough to ride it out, so wait longer between more attempts.
+  rclone copy "$ARCHIVE" "$RCLONE_REMOTE" --no-traverse \
+    --retries 6 --retries-sleep 30s --low-level-retries 20
   echo "==> Pruning backups older than $RETAIN_DAYS days"
   rclone delete "$RCLONE_REMOTE" --min-age "${RETAIN_DAYS}d" || true
   # B2 keeps hidden previous versions, so a delete alone does not free the

@@ -121,6 +121,42 @@ check_parse "files are detected" \
   '1-before.jpg
 2-after.jpg' 'names_with_id'
 
+# Regression: the parser used to assume "name" was immediately followed by "id".
+# When the API's layout changed, every photo silently disappeared from backups.
+check_parse "files found when keys are in a different order" \
+  '[{"id":"abc","name":"1-before.jpg","size":10},{"id":"def","updated_at":"x","name":"2-after.jpg"}]' \
+  '1-before.jpg
+2-after.jpg' 'names_with_id'
+check_parse "folders found when keys are in a different order" \
+  '[{"updated_at":null,"name":"jane-doe","id":null}]' 'jane-doe' 'names_without_id'
+check_parse "folders found when id key is absent altogether" \
+  '[{"name":"jane-doe","metadata":null}]' 'jane-doe' 'names_without_id'
+check_parse "pretty-printed listing is parsed" \
+  '[
+  {
+    "name": "jane-doe",
+    "id": null
+  },
+  {
+    "name": "amy-lee",
+    "id": null
+  }
+]' 'jane-doe
+amy-lee' 'names_without_id'
+check_parse "nested metadata does not confuse file detection" \
+  '[{"name":"1-before.jpg","id":"abc","metadata":{"eTag":"x","size":10,"mimetype":"image/jpeg"}},{"name":"2-after.jpg","id":"def","metadata":{"size":5}}]' \
+  '1-before.jpg
+2-after.jpg' 'names_with_id'
+check_parse "paths are read from the photos table" \
+  '[{"id":"1","client_name":"Jane Doe","path":"jane-doe/1-before.jpg"},{"id":"2","path":"jane-doe/2-after.jpg","kind":"after"}]' \
+  'jane-doe/1-before.jpg
+jane-doe/2-after.jpg' 'paths_from_table'
+check_parse "empty photos table yields no paths" '[]' '' 'paths_from_table'
+check_parse "no photo rows counts as 0 (and does not abort)" '[]' '0' 'count_db_photo_rows'
+check_parse "photo rows are counted" \
+  '[{"id":"1","client_name":"Jane Doe","path":"jane-doe/1-before.jpg","kind":"before"},{"id":"2","client_name":"Jane Doe","path":"jane-doe/2-after.jpg","kind":"after"}]' \
+  '2' 'count_db_photo_rows'
+
 # and the loop that consumes them must not trip on empty input either
 if (
   set -euo pipefail

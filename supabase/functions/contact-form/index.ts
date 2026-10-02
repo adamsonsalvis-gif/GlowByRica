@@ -7,6 +7,16 @@
 //   3. Emails the client an auto-reply confirming receipt (NOT a confirmed
 //      booking - Rica still agrees the exact time by hand).
 //
+// Spam protection (this endpoint is public, and the auto-reply would
+// otherwise let a bot make us email any address it likes):
+//   - Honeypot: a hidden "fax_number" field. Bots fill it, humans can't
+//     see it. Filled => pretend success, send nothing, store nothing.
+//   - Timing: the page stamps "form_started_at". Missing, absurd, or under
+//     MIN_FILL_MS old => rejected.
+//   - Rate limits, counted from accepted rows in `enquiries` over the last
+//     hour: per email, per IP (stored only as a salted hash), and overall.
+//     Needs supabase/enquiries-spam-protection.sql run once.
+//
 // Deploy with JWT verification turned OFF - this must be reachable by
 // anonymous site visitors with no Supabase session. In the dashboard:
 // Edge Functions -> contact-form -> untick "Enforce JWT verification".
@@ -50,6 +60,46 @@ const isValidEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+// Anti-spam tuning. Real enquiries are a handful a week, so these are generous
+// for people and tight for bots. Resend's free tier is 100 emails/day and each
+// enquiry sends two, which is why there is an overall cap too.
+const MIN_FILL_MS = 3_000;               // nobody completes this form faster
+const MAX_FORM_AGE_MS = 7 * 24 * 3600_000; // a tab left open for a week => ask to refresh
+const WINDOW_MS = 3600_000;
+const LIMIT_PER_EMAIL = 3;
+const LIMIT_PER_IP = 5;
+const LIMIT_OVERALL = 20;
+
+const MAX_LEN = { name: 100, email: 254, phone: 40, treatment: 100, preferred_time: 100, message: 3000 };
+
+// Cloudflare fronts Supabase and sets cf-connecting-ip itself, so it can't be
+// spoofed by the client the way a leftmost x-forwarded-for entry can.
+function clientIp(req: Request): string | null {
+  return req.headers.get("cf-connecting-ip")
+    ?? req.headers.get("x-forwarded-for")?.split(",")[0].trim()
+    ?? null;
+}
+
+// We never store the raw IP (personal data) - only a salted one-way hash, which
+// is enough to count "same visitor" for rate limiting. The service key is
+// already a secret only this function holds, so it doubles as the salt.
+async function hashIp(ip: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${ip}:${SERVICE_ROLE_KEY}`));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function recentCount(column: "email" | "ip_hash" | null, value: string | null, since: string): Promise<number> {
+  let q = supabase.from("enquiries").select("id", { count: "exact", head: true }).gte("created_at", since);
+  if (column && value) q = q.eq(column, value);
+  const { count, error } = await q;
+  if (error) {
+    // Fail open: a database hiccup shouldn't lock real clients out.
+    console.error("contact-form: rate limit lookup failed", error);
+    return 0;
+  }
+  return count ?? 0;
+}
+
 function sendEmail(to: string, subject: string, html: string, replyTo?: string) {
   return fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -79,17 +129,38 @@ Deno.serve(async (req) => {
   }
 
   let name = "", email = "", phone = "", treatment = "", preferred_time = "", message = "";
+  let honeypot = "", startedAtRaw = "";
   try {
     const form = await req.formData();
     name = String(form.get("name") || "").trim();
-    email = String(form.get("email") || "").trim();
+    // Lower-cased so the per-email rate limit can't be dodged with "A@x.com" vs "a@x.com".
+    email = String(form.get("email") || "").trim().toLowerCase();
     phone = String(form.get("phone") || "").trim();
     treatment = String(form.get("treatment") || "").trim();
     preferred_time = String(form.get("preferred_time") || "").trim();
     message = String(form.get("message") || "").trim();
+    honeypot = String(form.get("fax_number") || "").trim();
+    startedAtRaw = String(form.get("form_started_at") || "").trim();
   } catch (err) {
     console.error("contact-form: could not parse form data", err);
     return new Response(JSON.stringify({ error: "Bad request" }), { status: 400, headers });
+  }
+
+  // 1. Honeypot. Answer "success" so the bot learns nothing, but do nothing.
+  if (honeypot) {
+    console.warn("contact-form: honeypot tripped, dropping submission");
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
+  }
+
+  // 2. Timing. A visible message here, because a real person on a stale cached
+  // copy of the page (no stamp yet) can hit it and just needs to refresh.
+  const startedAt = Number(startedAtRaw);
+  const age = Date.now() - startedAt;
+  if (!startedAtRaw || !Number.isFinite(startedAt) || age < 0 || age > MAX_FORM_AGE_MS) {
+    return new Response(JSON.stringify({ error: "Please refresh the page and try sending your message again." }), { status: 400, headers });
+  }
+  if (age < MIN_FILL_MS) {
+    return new Response(JSON.stringify({ error: "That was very quick - please take a moment and try again." }), { status: 400, headers });
   }
 
   if (!name || !email || !phone || !treatment || !message) {
@@ -98,10 +169,32 @@ Deno.serve(async (req) => {
   if (!isValidEmail(email)) {
     return new Response(JSON.stringify({ error: "Invalid email address" }), { status: 400, headers });
   }
+  if (name.length > MAX_LEN.name || email.length > MAX_LEN.email || phone.length > MAX_LEN.phone ||
+      treatment.length > MAX_LEN.treatment || preferred_time.length > MAX_LEN.preferred_time ||
+      message.length > MAX_LEN.message) {
+    return new Response(JSON.stringify({ error: "One of your answers is too long - please shorten it and try again." }), { status: 400, headers });
+  }
+
+  // 3. Rate limits.
+  const ip = clientIp(req);
+  const ip_hash = ip ? await hashIp(ip) : null;
+  const since = new Date(Date.now() - WINDOW_MS).toISOString();
+  const [byEmail, byIp, overall] = await Promise.all([
+    recentCount("email", email, since),
+    ip_hash ? recentCount("ip_hash", ip_hash, since) : Promise.resolve(0),
+    recentCount(null, null, since),
+  ]);
+  if (byEmail >= LIMIT_PER_EMAIL || byIp >= LIMIT_PER_IP) {
+    return new Response(JSON.stringify({ error: "You've sent a few messages recently. Please wait a little while before trying again, or email rica@glowbyrica.com." }), { status: 429, headers });
+  }
+  if (overall >= LIMIT_OVERALL) {
+    console.warn("contact-form: overall hourly cap reached");
+    return new Response(JSON.stringify({ error: "We're receiving a lot of messages right now. Please email rica@glowbyrica.com directly." }), { status: 429, headers });
+  }
 
   const { data: inserted, error: dbError } = await supabase
     .from("enquiries")
-    .insert({ name, email, phone, treatment, preferred_time, message })
+    .insert({ name, email, phone, treatment, preferred_time, message, ip_hash })
     .select("id")
     .single();
 

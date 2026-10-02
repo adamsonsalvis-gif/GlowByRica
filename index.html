@@ -1137,6 +1137,26 @@
             margin-bottom: 0.75rem;
         }
 
+        /* Off-screen rather than display:none, which some bots detect and skip */
+        .hp-field {
+            position: absolute;
+            left: -9999px;
+            top: auto;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+        }
+
+        .form-error {
+            display: none;
+            color: #f0a0a0;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin: 0 0 0.8rem 0;
+        }
+
+        .form-error.active { display: block; }
+
         .contact-info-block h3 {
             color: #C9A463;
             font-size: 1.4rem;
@@ -1716,6 +1736,16 @@
                             <input type="hidden" name="preferred_time" id="dtValue" required>
                         </div>
                         <textarea name="message" placeholder="Your message... *" required></textarea>
+                        <!-- Spam traps: humans never see or fill these. "fax_number" is a honeypot
+                             (bots fill every field); "form_started_at" is stamped by script.js on load,
+                             so a submission with no JS or an impossibly quick one is rejected. -->
+                        <div class="hp-field" aria-hidden="true">
+                            <label>Leave this field empty
+                                <input type="text" name="fax_number" tabindex="-1" autocomplete="off">
+                            </label>
+                        </div>
+                        <input type="hidden" name="form_started_at" id="formStartedAt">
+                        <p class="form-error" id="formError" role="alert"></p>
                         <button type="submit" class="contact-form-btn">Send Message</button>
                         <p style="font-size:0.75rem; color:#E6DCCB; margin-top:0.6rem; line-height:1.6;">
                             By sending an enquiry you agree to our

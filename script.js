@@ -219,8 +219,21 @@ document.querySelectorAll('section').forEach(section => {
 // Contact form AJAX submission
 const contactForm = document.getElementById('contactForm');
 if (contactForm) {
+    // Stamp when the form appeared; the server rejects submissions that arrive
+    // implausibly fast or with no stamp at all (bots that don't run JS).
+    const startedAt = document.getElementById('formStartedAt');
+    if (startedAt) startedAt.value = String(Date.now());
+
     contactForm.addEventListener('submit', async function(e) {
         e.preventDefault();
+        const formError = document.getElementById('formError');
+        const submitBtn = contactForm.querySelector('button[type="submit"]');
+        const showError = msg => {
+            if (!formError) return;
+            formError.textContent = msg;
+            formError.classList.add('active');
+        };
+        if (formError) formError.classList.remove('active');
 
         // Hidden inputs (treatment select, date/time picker) skip native
         // validation, so check them here and flash the field if empty.
@@ -238,6 +251,7 @@ if (contactForm) {
         }
 
         const data = new FormData(contactForm);
+        if (submitBtn) submitBtn.disabled = true;
         try {
             const response = await fetch(contactForm.action, {
                 method: 'POST',
@@ -250,10 +264,19 @@ if (contactForm) {
                         <span>✦</span>
                         Your message has been sent!<br>We'll be in touch with you soon.
                     </div>`;
+                return;
             }
+            let msg = 'Sorry, something went wrong sending your message. Please try again, or email rica@glowbyrica.com.';
+            try {
+                const body = await response.json();
+                if (body && body.error) msg = body.error;
+            } catch (_) { /* non-JSON error body - keep the generic message */ }
+            showError(msg);
         } catch (err) {
             console.error(err);
+            showError("Sorry, we couldn't send your message. Please check your connection and try again, or email rica@glowbyrica.com.");
         }
+        if (submitBtn) submitBtn.disabled = false;
     });
 }
 
