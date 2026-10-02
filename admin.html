@@ -270,6 +270,18 @@
 
         .list-row .meta { color: #6B1D1D; font-size: 0.78rem; }
 
+        /* Dashboard rows that open the client profile */
+        .list-row.clickable {
+            cursor: pointer;
+            margin: 0 -0.5rem;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            border-radius: 6px;
+            transition: background 0.15s ease;
+        }
+        .list-row.clickable:hover,
+        .list-row.clickable:focus-visible { background: rgba(201,164,99,0.14); outline: none; }
+
         .status-pill {
             padding: 0.25rem 0.7rem;
             border-radius: 50px;
@@ -491,6 +503,29 @@
         }
 
         .icon-btn:hover { color: #C9A463; }
+
+        .resched-btn {
+            background: none;
+            border: 1px solid rgba(107,29,29,0.35);
+            color: #6B1D1D;
+            border-radius: 999px;
+            padding: 0.2rem 0.7rem;
+            font-size: 0.72rem;
+            font-family: inherit;
+            cursor: pointer;
+            white-space: nowrap;
+            align-self: center;
+            margin-left: auto;
+        }
+
+        .resched-btn:hover { background: #6B1D1D; color: #FAF3EB; border-color: #6B1D1D; }
+
+        .resched-current {
+            font-size: 0.82rem;
+            color: #6B1D1D;
+            margin: -0.3rem 0 0.9rem 0;
+            line-height: 1.5;
+        }
 
         .coming-soon {
             text-align: center;
@@ -1423,6 +1458,30 @@
         </div>
     </div>
 
+    <!-- Reschedule appointment modal -->
+    <div class="modal-overlay" id="reschedule-modal-overlay">
+        <div class="modal-card">
+            <h3>Reschedule Appointment</h3>
+            <p class="modal-error" id="reschedule-error"></p>
+            <p class="resched-current"><strong id="resched-who"></strong><br>Currently: <span id="resched-current"></span></p>
+            <label>New Date</label>
+            <input type="date" id="resched-date">
+            <label>New Time</label>
+            <input type="time" id="resched-time">
+            <label>Reason (optional, kept in the appointment notes)</label>
+            <input type="text" id="resched-reason" placeholder="e.g. Client unwell">
+            <label style="display:flex; align-items:center; gap:0.5rem; text-transform:none; letter-spacing:0; margin-top:0.4rem;">
+                <input type="checkbox" id="resched-send" style="width:auto; margin:0;">
+                Email the client their new time
+            </label>
+            <input type="email" id="resched-email" placeholder="client@example.com" style="margin-top:0.4rem;">
+            <div class="modal-actions">
+                <button class="btn btn-outline" id="cancel-reschedule">Cancel</button>
+                <button class="btn" id="save-reschedule">Reschedule</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Full-size photo viewer -->
     <div class="photo-viewer" id="photo-viewer">
         <button class="photo-viewer-close" id="photo-viewer-close">&times;</button>
@@ -1661,6 +1720,10 @@
         const statusPillClass = { confirmed: 'status-signed', pending: 'status-pending', cancelled: 'status-expired', signed: 'status-signed', expired: 'status-expired' };
         const statusLabel = { confirmed: 'Confirmed', pending: 'Pending', cancelled: 'Cancelled', signed: 'Signed', expired: 'Expired' };
 
+        // Appointments currently on screen, by id, so the Reschedule dialog can
+        // open with the full record without another round trip.
+        const apptCache = new Map();
+
         async function loadAllData() {
             document.getElementById('dashboard-date').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
             await Promise.all([loadDashboard(), loadAgenda(), loadConsentRecords(), loadClients(), renderCalendar()]);
@@ -1689,11 +1752,12 @@
             const listEl = document.getElementById('today-appointments-list');
             listEl.innerHTML = todayAppts.length
                 ? todayAppts.map(a => `
-                    <div class="list-row">
+                    <div class="list-row clickable" role="button" tabindex="0" data-client="${escapeAttr(a.client_name)}" title="Open ${escapeAttr(a.client_name)}'s profile">
                         <div><strong>${escapeHtml(a.client_name)}</strong><div class="meta">${escapeHtml(a.treatment)} · ${formatTime(a.appointment_time)}</div></div>
                         <span class="status-pill ${statusPillClass[a.status] || 'status-pending'}">${statusLabel[a.status] || a.status}</span>
                     </div>`).join('')
                 : '<p class="empty-state">No appointments booked for today.</p>';
+            wireClientRows(listEl);
 
             const { data: recentConsent } = await supabaseClient
                 .from('consent_records')
@@ -1704,11 +1768,30 @@
             const recentEl = document.getElementById('recent-consent-list');
             recentEl.innerHTML = (recentConsent && recentConsent.length)
                 ? recentConsent.map(c => `
-                    <div class="list-row">
+                    <div class="list-row clickable" role="button" tabindex="0" data-client="${escapeAttr(c.client_name)}" title="Open ${escapeAttr(c.client_name)}'s profile">
                         <div><strong>${escapeHtml(c.client_name)}</strong><div class="meta">${CONSENT_TEMPLATES[c.template_key] ? CONSENT_TEMPLATES[c.template_key].shortName : c.template_key}</div></div>
                         <span class="status-pill status-signed">Signed</span>
                     </div>`).join('')
                 : '<p class="empty-state">No consent forms yet.</p>';
+            wireClientRows(recentEl);
+        }
+
+        // Dashboard rows jump straight to that person's client profile. Works
+        // by mouse/tap and by keyboard (Enter or Space) since the rows are
+        // role="button". switchView and openClientProfile are defined further
+        // down; they are function declarations, so they are available by the
+        // time a row is actually clicked.
+        function wireClientRows(container) {
+            container.querySelectorAll('.list-row.clickable').forEach(row => {
+                const open = () => {
+                    switchView('clients');
+                    openClientProfile(row.dataset.client);
+                };
+                row.addEventListener('click', open);
+                row.addEventListener('keydown', e => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+                });
+            });
         }
 
         let selectedCalendarDate = null; // ISO date string, or null = show upcoming
@@ -1731,6 +1814,7 @@
             }
 
             const { data } = await query;
+            (data || []).forEach(a => apptCache.set(a.id, a));
 
             agendaEl.innerHTML = (data && data.length)
                 ? data.map(a => `
@@ -1740,8 +1824,10 @@
                             <div class="name">${escapeHtml(a.client_name)}</div>
                             <div class="treatment">${escapeHtml(a.treatment)}${selectedCalendarDate ? '' : ' · ' + formatDate(a.appointment_date)}</div>
                         </div>
+                        ${a.status === 'cancelled' ? '' : `<button class="resched-btn" data-resched="${a.id}">Reschedule</button>`}
                     </div>`).join('')
                 : `<p class="empty-state">${selectedCalendarDate ? 'No appointments booked this day.' : 'No upcoming appointments.'}</p>`;
+            wireRescheduleButtons(agendaEl);
         }
 
         document.getElementById('agenda-back-link').addEventListener('click', (e) => {
@@ -1982,6 +2068,145 @@
                     console.error('appointment-confirmation failed:', err);
                     alert(`Appointment saved, but the confirmation email to ${client_email} could not be sent.`);
                 }
+            }
+        });
+
+        // ---------- Reschedule appointment ----------
+        const rescheduleModal = document.getElementById('reschedule-modal-overlay');
+        let reschedulingId = null;
+
+        function wireRescheduleButtons(container) {
+            container.querySelectorAll('[data-resched]').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    openReschedule(btn.dataset.resched);
+                });
+            });
+        }
+
+        function openReschedule(id) {
+            const a = apptCache.get(id);
+            if (!a) return;
+            reschedulingId = id;
+            document.getElementById('resched-who').textContent = `${a.client_name} - ${a.treatment}`;
+            document.getElementById('resched-current').textContent = `${formatDate(a.appointment_date)} at ${formatTime(a.appointment_time)}`;
+            // Prefilled with the current slot so changing just the day or just the time is one edit
+            document.getElementById('resched-date').value = a.appointment_date;
+            document.getElementById('resched-time').value = (a.appointment_time || '').slice(0, 5);
+            document.getElementById('resched-reason').value = '';
+            document.getElementById('reschedule-error').classList.remove('active');
+
+            // Appointments don't store an email, so look the client up by name.
+            // If we find one, tick "email the client" by default; if not, leave it
+            // unticked and let Rica type an address if she wants to send one.
+            const sendBox = document.getElementById('resched-send');
+            const emailField = document.getElementById('resched-email');
+            sendBox.checked = false;
+            emailField.value = '';
+            supabaseClient.from('clients').select('email').eq('name', a.client_name).maybeSingle()
+                .then(({ data }) => {
+                    // The dialog may have been closed or reopened for someone else meanwhile
+                    if (reschedulingId !== id) return;
+                    if (data && data.email) {
+                        emailField.value = data.email;
+                        sendBox.checked = true;
+                    }
+                });
+            rescheduleModal.classList.add('active');
+        }
+
+        document.getElementById('cancel-reschedule').addEventListener('click', () => {
+            rescheduleModal.classList.remove('active');
+        });
+
+        document.getElementById('save-reschedule').addEventListener('click', async () => {
+            const a = apptCache.get(reschedulingId);
+            const errorEl = document.getElementById('reschedule-error');
+            const saveBtn = document.getElementById('save-reschedule');
+            if (!a) return;
+
+            const date = document.getElementById('resched-date').value;
+            const time = document.getElementById('resched-time').value;
+            const reason = document.getElementById('resched-reason').value.trim();
+
+            if (!date || !time) {
+                errorEl.textContent = 'Please choose a new date and time.';
+                errorEl.classList.add('active');
+                return;
+            }
+            if (date === a.appointment_date && time === (a.appointment_time || '').slice(0, 5)) {
+                errorEl.textContent = 'That is the same date and time as now.';
+                errorEl.classList.add('active');
+                return;
+            }
+            const sendEmail = document.getElementById('resched-send').checked;
+            const clientEmail = document.getElementById('resched-email').value.trim();
+            if (sendEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail)) {
+                errorEl.textContent = 'Enter a valid email address for the client, or untick "Email the client".';
+                errorEl.classList.add('active');
+                return;
+            }
+            errorEl.classList.remove('active');
+            saveBtn.disabled = true;
+
+            try {
+                // Rica can always override, but she should know about a problem first
+                const [blockedRes, clashRes] = await Promise.all([
+                    supabaseClient.from('blocked_days').select('day').eq('day', date).maybeSingle(),
+                    supabaseClient.from('appointments').select('client_name')
+                        .eq('appointment_date', date).eq('appointment_time', time)
+                        .neq('status', 'cancelled').neq('id', a.id)
+                ]);
+                const warnings = [];
+                if (date < todayISO()) warnings.push('That date is in the past.');
+                if (blockedRes.data) warnings.push('You have marked that day as unavailable.');
+                if (clashRes.data && clashRes.data.length) warnings.push(`${clashRes.data[0].client_name} is already booked at that time.`);
+                if (warnings.length && !confirm(warnings.join('\n') + '\n\nReschedule anyway?')) return;
+
+                // Keep a trail in the notes so the original slot is never lost
+                const note = `Rescheduled on ${new Date().toLocaleDateString('en-GB')} from ${formatDate(a.appointment_date)} ${formatTime(a.appointment_time)}${reason ? ' - ' + reason : ''}.`;
+                const notes = a.notes ? `${a.notes}\n${note}` : note;
+
+                const { error } = await supabaseClient.from('appointments')
+                    .update({ appointment_date: date, appointment_time: time, notes })
+                    .eq('id', a.id);
+                if (error) {
+                    errorEl.textContent = error.message;
+                    errorEl.classList.add('active');
+                    return;
+                }
+
+                rescheduleModal.classList.remove('active');
+                loadDashboard();
+                loadAgenda();
+                renderCalendar();
+                if (clientProfilePanel.style.display === 'block' && currentClientName) {
+                    openClientProfile(currentClientName);
+                }
+
+                // The move is saved either way; a failed email must never undo it.
+                if (sendEmail) {
+                    try {
+                        const { error: fnError } = await supabaseClient.functions.invoke('appointment-confirmation', {
+                            body: {
+                                type: 'reschedule',
+                                name: a.client_name,
+                                email: clientEmail,
+                                treatment: a.treatment,
+                                appointment_date: date,
+                                appointment_time: time,
+                                previous_date: a.appointment_date,
+                                previous_time: a.appointment_time
+                            }
+                        });
+                        if (fnError) throw fnError;
+                    } catch (err) {
+                        console.error('reschedule email failed:', err);
+                        alert(`The appointment was moved, but the email to ${clientEmail} could not be sent.`);
+                    }
+                }
+            } finally {
+                saveBtn.disabled = false;
             }
         });
 
@@ -2760,7 +2985,7 @@
             const [formsRes, apptsRes, clientRes] = await Promise.all([
                 supabaseClient.from('consent_records').select('id, template_key, created_at')
                     .eq('client_name', name).order('created_at', { ascending: false }),
-                supabaseClient.from('appointments').select('treatment, appointment_date, appointment_time, status')
+                supabaseClient.from('appointments').select('id, client_name, treatment, appointment_date, appointment_time, status, notes')
                     .eq('client_name', name).order('appointment_date', { ascending: false }).limit(10),
                 supabaseClient.from('clients').select('phone, email').eq('name', name).maybeSingle()
             ]);
@@ -2793,13 +3018,16 @@
 
             const apptsEl = document.getElementById('client-appts-list');
             const appts = apptsRes.data || [];
+            appts.forEach(a => apptCache.set(a.id, a));
             apptsEl.innerHTML = appts.length
                 ? appts.map(a => `
-                    <div class="list-row">
+                    <div class="list-row" style="gap:0.6rem;">
                         <div><strong>${escapeHtml(a.treatment)}</strong><div class="meta">${formatDate(a.appointment_date)} · ${formatTime(a.appointment_time)}</div></div>
+                        ${a.status === 'cancelled' ? '' : `<button class="resched-btn" data-resched="${a.id}">Reschedule</button>`}
                         <span class="status-pill ${statusPillClass[a.status] || 'status-pending'}">${statusLabel[a.status] || a.status}</span>
                     </div>`).join('')
                 : '<p class="empty-state">No appointments recorded.</p>';
+            wireRescheduleButtons(apptsEl);
         }
 
         document.getElementById('client-back-btn').addEventListener('click', showClientsList);
