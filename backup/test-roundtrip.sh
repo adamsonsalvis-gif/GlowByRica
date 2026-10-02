@@ -27,7 +27,7 @@ JSON
 cat > "$STAGE/tables/consent_records.json" <<'JSON'
 [{"id":"22222222-2222-2222-2222-222222222222","template_key":"medical","client_name":"Jane Doe","data":{"patient_name":"Jane Doe","questions":[{"a":"no","d":""}]}}]
 JSON
-for t in appointments client_photos consent_forms blocked_days; do echo '[]' > "$STAGE/tables/$t.json"; done
+for t in appointments client_photos consent_forms blocked_days enquiries; do echo '[]' > "$STAGE/tables/$t.json"; done
 
 # two "photos" of random bytes, so checksums are meaningful
 head -c 40000 /dev/urandom > "$STAGE/photos/jane-doe/1-before.jpg"

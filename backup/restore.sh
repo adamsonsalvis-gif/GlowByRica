@@ -21,7 +21,7 @@ ARCHIVE="${1:-}"
 MODE="${2:---verify}"
 BUCKET="patient-photos"
 # clients before dependants; admin_users is environment-specific, skipped
-TABLES="clients appointments consent_records client_photos consent_forms blocked_days"
+TABLES="clients appointments consent_records client_photos consent_forms blocked_days enquiries"
 
 if [ -z "$ARCHIVE" ] || [ ! -f "$ARCHIVE" ]; then
   echo "Usage: $0 <archive.tar.gz.gpg> [--verify|--dry-run|--restore]" >&2

@@ -18,7 +18,7 @@ cd "$(dirname "$0")"
 
 ARCHIVE="${1:-}"
 BUCKET="patient-photos"
-TABLES="clients appointments consent_records client_photos consent_forms blocked_days"
+TABLES="clients appointments consent_records client_photos consent_forms blocked_days enquiries"
 
 [ -n "$ARCHIVE" ] && [ -f "$ARCHIVE" ] || { echo "Usage: $0 <archive.tar.gz.gpg>" >&2; exit 1; }
 : "${BACKUP_PASSPHRASE:?}" "${TARGET_URL:?}" "${TARGET_SERVICE_KEY:?}"

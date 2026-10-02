@@ -27,7 +27,7 @@ set -euo pipefail
 : "${BACKUP_PASSPHRASE:?BACKUP_PASSPHRASE not set}"
 
 BUCKET="patient-photos"
-TABLES="clients appointments consent_records client_photos consent_forms blocked_days admin_users"
+TABLES="clients appointments consent_records client_photos consent_forms blocked_days enquiries admin_users"
 PAGE=1000
 OUT_DIR="${BACKUP_OUT:-./backups}"
 RETAIN_DAYS="${RETAIN_DAYS:-90}"
