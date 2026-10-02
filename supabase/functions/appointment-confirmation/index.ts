@@ -2,7 +2,8 @@
 //
 // Called from admin.html when Rica books an appointment with a client email
 // on file, or reschedules one (body.type = "reschedule", with the previous
-// date/time). Sends the client a branded confirmation of the date, time and
+// date/time) or cancels one (body.type = "cancellation"). Sends the client a
+// branded email with the date, time and
 // treatment. Unlike contact-form, this one is NOT public — it stays behind
 // normal JWT verification, AND the function itself checks the caller is a
 // row in admin_users, because the anon key (which counts as "a valid JWT")
@@ -139,16 +140,26 @@ Deno.serve(async (req) => {
     : "";
   const LOGO_URL = "https://glowbyrica.com/images/GLOW.png";
 
-  const headline = isReschedule
-    ? "Your appointment with Glow by Rica has been rescheduled. ✨"
-    : "Your consultation with Glow by Rica is confirmed. ✨";
-  const detailsLabel = isReschedule ? "New appointment details" : "Appointment details";
+  // "cancellation" = an appointment Rica has cancelled; the date/time sent are
+  // the slot that was cancelled.
+  const isCancel = body.type === "cancellation";
+
+  const headline = isCancel
+    ? "Your appointment with Glow by Rica has been cancelled."
+    : isReschedule
+      ? "Your appointment with Glow by Rica has been rescheduled. ✨"
+      : "Your consultation with Glow by Rica is confirmed. ✨";
+  const detailsLabel = isCancel
+    ? "Cancelled appointment"
+    : isReschedule ? "New appointment details" : "Appointment details";
   const previousRow = previously
     ? `<p style="margin:0.8rem 0 0 0; font-size:0.8rem; color:rgba(58,13,13,0.6);">Previously: ${escapeHtml(previously)}</p>`
     : "";
   // A brand new booking gets the "what to expect" paragraphs. Someone being
   // moved to a new time has already read them, so they get a short note instead.
-  const expectBlock = isReschedule
+  const expectBlock = isCancel
+    ? `<p style="margin:0 0 1.4rem 0;">If you'd like to book a new appointment, just reply to this email or get in touch and we'll find a time that suits you. If you weren't expecting this cancellation, or have any questions, please let us know.</p>`
+    : isReschedule
     ? `<p style="margin:0 0 1.4rem 0;">If this new time doesn't suit you, please get in touch as soon as possible and we'll find another that does.</p>`
     : `<p style="margin:0 0 1rem 0;">During your consultation, we'll take the time to discuss your concerns, what you'd like to achieve, and whether treatment may be suitable for you.</p>
             <p style="margin:0 0 1rem 0;">You'll be asked to complete a short medical history form when you arrive.</p>
@@ -157,6 +168,18 @@ Deno.serve(async (req) => {
     ? "If you need to make any further changes, please let us know at least 24 hours before your appointment."
     : "If you need to cancel or reschedule your consultation, please let us know at least 24 hours before your appointment.";
 
+
+  // A cancellation email is short: no directions, no "see you soon" - the
+  // person is not coming. Everything else gets the clinic address and the
+  // 24-hour change line.
+  const clinicBlock = isCancel
+    ? ""
+    : `<p style="margin:0 0 0.6rem 0; color:#C9A463; font-family: Arial, sans-serif; font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;">Finding the clinic</p>
+            <p style="margin:0 0 1.4rem 0;">Glow by Rica<br>Suite 115, Phenix Salon<br>Springwell Square<br>Derby, DE1 1FB</p>
+            <p style="margin:0 0 1.4rem 0;">${cancelLine}</p>`;
+  const closingLine = isCancel
+    ? "We hope to see you at Glow by Rica soon."
+    : "We look forward to welcoming you to Glow by Rica.";
   const html = `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAF3EB; padding:32px 16px;">
       <tr><td align="center">
@@ -178,10 +201,8 @@ Deno.serve(async (req) => {
               </td></tr>
             </table>
             ${expectBlock}
-            <p style="margin:0 0 0.6rem 0; color:#C9A463; font-family: Arial, sans-serif; font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;">Finding the clinic</p>
-            <p style="margin:0 0 1.4rem 0;">Glow by Rica<br>Suite 115, Phenix Salon<br>Springwell Square<br>Derby, DE1 1FB</p>
-            <p style="margin:0 0 1.4rem 0;">${cancelLine}</p>
-            <p style="margin:0 0 1.4rem 0;">We look forward to welcoming you to Glow by Rica.</p>
+            ${clinicBlock}
+            <p style="margin:0 0 1.4rem 0;">${closingLine}</p>
             <p style="margin:0;">Warmly,<br><strong style="color:#C9A463;">Rica</strong><br>Registered Nurse<br>Glow by Rica</p>
           </td></tr>
           <tr><td style="padding:0 40px;">
@@ -199,7 +220,9 @@ Deno.serve(async (req) => {
       </td></tr>
     </table>`;
 
-  const subject = isReschedule
+  const subject = isCancel
+    ? "Your appointment has been cancelled - Glow by Rica"
+    : isReschedule
     ? "Your appointment has been rescheduled - Glow by Rica"
     : "Your consultation is confirmed - Glow by Rica";
   const emailRes = await sendEmail(email, subject, html, "rica@glowbyrica.com");

@@ -429,6 +429,11 @@
         .agenda-details .name { font-weight: 600; font-size: 0.85rem; }
         .agenda-details .treatment { font-size: 0.78rem; color: #6B1D1D; }
 
+        .agenda-item.cancelled .agenda-time,
+        .agenda-item.cancelled .agenda-details { opacity: 0.5; }
+        .agenda-item.cancelled .agenda-details .name { text-decoration: line-through; }
+        .cancelled-tag { color: #b23a3a; font-weight: 600; }
+
         .btn {
             display: inline-flex;
             align-items: center;
@@ -514,11 +519,20 @@
             font-family: inherit;
             cursor: pointer;
             white-space: nowrap;
+        }
+
+        .resched-btn:hover { background: #6B1D1D; color: #FAF3EB; border-color: #6B1D1D; }
+
+        /* Reschedule + delete sit together at the right of an appointment row */
+        .appt-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
             align-self: center;
             margin-left: auto;
         }
 
-        .resched-btn:hover { background: #6B1D1D; color: #FAF3EB; border-color: #6B1D1D; }
+        .appt-actions .icon-btn { margin-right: 0; }
 
         .resched-current {
             font-size: 0.82rem;
@@ -1482,6 +1496,25 @@
         </div>
     </div>
 
+    <!-- Cancel appointment modal -->
+    <div class="modal-overlay" id="cancel-modal-overlay">
+        <div class="modal-card">
+            <h3>Cancel Appointment</h3>
+            <p class="modal-error" id="cancel-error"></p>
+            <p class="resched-current"><strong id="cancel-who"></strong><br><span id="cancel-when"></span></p>
+            <p class="resched-current" style="margin-top:0;">The slot becomes available again, and the appointment stays on record marked as cancelled.</p>
+            <label style="display:flex; align-items:center; gap:0.5rem; text-transform:none; letter-spacing:0; margin-top:0.4rem;">
+                <input type="checkbox" id="cancel-send" style="width:auto; margin:0;">
+                Email the client to let them know
+            </label>
+            <input type="email" id="cancel-email" placeholder="client@example.com" style="margin-top:0.4rem;">
+            <div class="modal-actions">
+                <button class="btn btn-outline" id="keep-appointment">Keep Appointment</button>
+                <button class="btn" id="confirm-cancel">Cancel Appointment</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Full-size photo viewer -->
     <div class="photo-viewer" id="photo-viewer">
         <button class="photo-viewer-close" id="photo-viewer-close">&times;</button>
@@ -1739,7 +1772,8 @@
                 supabaseClient.from('appointments').select('client_name').gte('created_at', weekAgo)
             ]);
 
-            const todayAppts = todayApptsRes.data || [];
+            // Cancelled bookings stay on record but are not part of today's work or takings
+            const todayAppts = (todayApptsRes.data || []).filter(a => a.status !== 'cancelled');
             document.getElementById('stat-today-appts').textContent = todayAppts.length;
             document.getElementById('stat-pending-consent').textContent = consentCountRes.count ?? '0';
 
@@ -1818,13 +1852,13 @@
 
             agendaEl.innerHTML = (data && data.length)
                 ? data.map(a => `
-                    <div class="agenda-item">
+                    <div class="agenda-item${a.status === 'cancelled' ? ' cancelled' : ''}">
                         <div class="agenda-time">${formatTime(a.appointment_time)}</div>
                         <div class="agenda-details">
                             <div class="name">${escapeHtml(a.client_name)}</div>
-                            <div class="treatment">${escapeHtml(a.treatment)}${selectedCalendarDate ? '' : ' · ' + formatDate(a.appointment_date)}</div>
+                            <div class="treatment">${escapeHtml(a.treatment)}${selectedCalendarDate ? '' : ' · ' + formatDate(a.appointment_date)}${a.status === 'cancelled' ? ' · <span class="cancelled-tag">Cancelled</span>' : ''}</div>
                         </div>
-                        ${a.status === 'cancelled' ? '' : `<button class="resched-btn" data-resched="${a.id}">Reschedule</button>`}
+                        ${apptActionsHtml(a)}
                     </div>`).join('')
                 : `<p class="empty-state">${selectedCalendarDate ? 'No appointments booked this day.' : 'No upcoming appointments.'}</p>`;
             wireRescheduleButtons(agendaEl);
@@ -1890,7 +1924,7 @@
             const monthEnd = `${calendarViewYear}-${String(calendarViewMonth + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
 
             const [apptRes, blockedRes] = await Promise.all([
-                supabaseClient.from('appointments').select('appointment_date')
+                supabaseClient.from('appointments').select('appointment_date').neq('status', 'cancelled')
                     .gte('appointment_date', monthStart).lte('appointment_date', monthEnd),
                 supabaseClient.from('blocked_days').select('day')
                     .gte('day', monthStart).lte('day', monthEnd)
@@ -2077,6 +2111,16 @@
         const rescheduleModal = document.getElementById('reschedule-modal-overlay');
         let reschedulingId = null;
 
+        // Buttons shown on every appointment row. Cancelled ones can't be moved,
+        // but can still be deleted.
+        function apptActionsHtml(a) {
+            return `<div class="appt-actions">
+                ${a.status === 'cancelled' ? '' : `<button class="resched-btn" data-resched="${a.id}">Reschedule</button>
+                <button class="resched-btn" data-cancel-appt="${a.id}">Cancel</button>`}
+                <button class="icon-btn" data-delete-appt="${a.id}" title="Delete appointment"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
+        }
+
         function wireRescheduleButtons(container) {
             container.querySelectorAll('[data-resched]').forEach(btn => {
                 btn.addEventListener('click', e => {
@@ -2084,6 +2128,145 @@
                     openReschedule(btn.dataset.resched);
                 });
             });
+            container.querySelectorAll('[data-cancel-appt]').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    cancelAppointment(btn.dataset.cancelAppt);
+                });
+            });
+            container.querySelectorAll('[data-delete-appt]').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    deleteAppointment(btn.dataset.deleteAppt);
+                });
+            });
+        }
+
+        function refreshAfterAppointmentChange() {
+            loadDashboard();
+            loadAgenda();
+            renderCalendar();
+            if (clientProfilePanel.style.display === 'block' && currentClientName) {
+                openClientProfile(currentClientName);
+            }
+        }
+
+        // Cancel keeps the appointment on record (marked Cancelled, with the date
+        // in its notes) but frees the slot. Delete removes it entirely.
+        const cancelModal = document.getElementById('cancel-modal-overlay');
+        let cancellingId = null;
+
+        function cancelAppointment(id) {
+            const a = apptCache.get(id);
+            if (!a) return;
+            cancellingId = id;
+            document.getElementById('cancel-who').textContent = `${a.client_name} - ${a.treatment}`;
+            document.getElementById('cancel-when').textContent = `${formatDate(a.appointment_date)} at ${formatTime(a.appointment_time)}`;
+            document.getElementById('cancel-error').classList.remove('active');
+            prefillClientEmail(a,
+                document.getElementById('cancel-send'),
+                document.getElementById('cancel-email'),
+                () => cancellingId === id);
+            cancelModal.classList.add('active');
+        }
+
+        document.getElementById('keep-appointment').addEventListener('click', () => {
+            cancelModal.classList.remove('active');
+        });
+
+        document.getElementById('confirm-cancel').addEventListener('click', async () => {
+            const a = apptCache.get(cancellingId);
+            const errorEl = document.getElementById('cancel-error');
+            const confirmBtn = document.getElementById('confirm-cancel');
+            if (!a) return;
+
+            const sendEmail = document.getElementById('cancel-send').checked;
+            const clientEmail = document.getElementById('cancel-email').value.trim();
+            if (sendEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail)) {
+                errorEl.textContent = 'Enter a valid email address for the client, or untick "Email the client".';
+                errorEl.classList.add('active');
+                return;
+            }
+            errorEl.classList.remove('active');
+            confirmBtn.disabled = true;
+
+            try {
+                const note = `Cancelled on ${new Date().toLocaleDateString('en-GB')}.`;
+                const notes = a.notes ? `${a.notes}\n${note}` : note;
+                const changes = { status: 'cancelled', notes };
+                // An address typed here is remembered on the appointment
+                if (sendEmail && clientEmail !== a.client_email) changes.client_email = clientEmail;
+
+                const { error } = await supabaseClient.from('appointments').update(changes).eq('id', a.id);
+                if (error) {
+                    errorEl.textContent = error.message;
+                    errorEl.classList.add('active');
+                    return;
+                }
+
+                cancelModal.classList.remove('active');
+                refreshAfterAppointmentChange();
+
+                // The cancellation is saved either way; a failed email must never undo it.
+                if (sendEmail) {
+                    try {
+                        const { error: fnError } = await supabaseClient.functions.invoke('appointment-confirmation', {
+                            body: {
+                                type: 'cancellation',
+                                name: a.client_name,
+                                email: clientEmail,
+                                treatment: a.treatment,
+                                appointment_date: a.appointment_date,
+                                appointment_time: a.appointment_time
+                            }
+                        });
+                        if (fnError) throw fnError;
+                    } catch (err) {
+                        console.error('cancellation email failed:', err);
+                        alert(`The appointment was cancelled, but the email to ${clientEmail} could not be sent.`);
+                    }
+                }
+            } finally {
+                confirmBtn.disabled = false;
+            }
+        });
+
+        async function deleteAppointment(id) {
+            const a = apptCache.get(id);
+            if (!a) return;
+            if (!confirm(`Delete this appointment?\n\n${a.client_name} - ${a.treatment}\n${formatDate(a.appointment_date)} at ${formatTime(a.appointment_time)}\n\nThis cannot be undone. (To keep a record of a cancellation, use Cancel instead.)`)) return;
+
+            const { error } = await supabaseClient.from('appointments').delete().eq('id', id);
+            if (error) {
+                alert('Could not delete: ' + error.message);
+                return;
+            }
+            apptCache.delete(id);
+            refreshAfterAppointmentChange();
+        }
+
+        // Use the email saved when the appointment was booked. Appointments made
+        // before that was stored fall back to the client's profile; if neither
+        // has one, leave the box unticked and let Rica type an address if she
+        // wants to send one (it is then saved on the appointment for next time).
+        // stillCurrent() guards against the dialog having been closed or reopened
+        // for someone else while the profile lookup was in flight.
+        function prefillClientEmail(a, sendBox, emailField, stillCurrent) {
+            sendBox.checked = false;
+            emailField.value = '';
+            if (a.client_email) {
+                emailField.value = a.client_email;
+                sendBox.checked = true;
+                return;
+            }
+            supabaseClient.from('clients').select('email').eq('name', a.client_name).maybeSingle()
+                .then(({ data }) => {
+                    if (!stillCurrent()) return;
+                    if (data && data.email) {
+                        emailField.value = data.email;
+                        sendBox.checked = true;
+                    }
+                });
         }
 
         function openReschedule(id) {
@@ -2098,28 +2281,10 @@
             document.getElementById('resched-reason').value = '';
             document.getElementById('reschedule-error').classList.remove('active');
 
-            // Use the email saved when the appointment was booked. Appointments made
-            // before that was stored fall back to the client's profile; if neither
-            // has one, leave the box unticked and let Rica type an address if she
-            // wants to send one (it is then saved on the appointment for next time).
-            const sendBox = document.getElementById('resched-send');
-            const emailField = document.getElementById('resched-email');
-            sendBox.checked = false;
-            emailField.value = '';
-            if (a.client_email) {
-                emailField.value = a.client_email;
-                sendBox.checked = true;
-            } else {
-                supabaseClient.from('clients').select('email').eq('name', a.client_name).maybeSingle()
-                    .then(({ data }) => {
-                        // The dialog may have been closed or reopened for someone else meanwhile
-                        if (reschedulingId !== id) return;
-                        if (data && data.email) {
-                            emailField.value = data.email;
-                            sendBox.checked = true;
-                        }
-                    });
-            }
+            prefillClientEmail(a,
+                document.getElementById('resched-send'),
+                document.getElementById('resched-email'),
+                () => reschedulingId === id);
             rescheduleModal.classList.add('active');
         }
 
@@ -3036,7 +3201,7 @@
                 ? appts.map(a => `
                     <div class="list-row" style="gap:0.6rem;">
                         <div><strong>${escapeHtml(a.treatment)}</strong><div class="meta">${formatDate(a.appointment_date)} · ${formatTime(a.appointment_time)}</div></div>
-                        ${a.status === 'cancelled' ? '' : `<button class="resched-btn" data-resched="${a.id}">Reschedule</button>`}
+                        ${apptActionsHtml(a)}
                         <span class="status-pill ${statusPillClass[a.status] || 'status-pending'}">${statusLabel[a.status] || a.status}</span>
                     </div>`).join('')
                 : '<p class="empty-state">No appointments recorded.</p>';
