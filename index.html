@@ -1737,14 +1737,14 @@
                         </div>
                         <textarea name="message" placeholder="Your message... *" required></textarea>
                         <!-- Spam traps: humans never see or fill these. "fax_number" is a honeypot
-                             (bots fill every field); "form_started_at" is stamped by script.js on load,
-                             so a submission with no JS or an impossibly quick one is rejected. -->
+                             (bots fill every field); "form_elapsed_ms" is how long the form had been open, measured
+                             by script.js in the visitor's own browser at submit time, so no JS or an impossibly quick one is rejected. -->
                         <div class="hp-field" aria-hidden="true">
                             <label>Leave this field empty
                                 <input type="text" name="fax_number" tabindex="-1" autocomplete="off">
                             </label>
                         </div>
-                        <input type="hidden" name="form_started_at" id="formStartedAt">
+                        <input type="hidden" name="form_elapsed_ms" id="formElapsed">
                         <p class="form-error" id="formError" role="alert"></p>
                         <button type="submit" class="contact-form-btn">Send Message</button>
                         <p style="font-size:0.75rem; color:#E6DCCB; margin-top:0.6rem; line-height:1.6;">

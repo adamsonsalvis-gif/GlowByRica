@@ -11,7 +11,8 @@
 // otherwise let a bot make us email any address it likes):
 //   - Honeypot: a hidden "fax_number" field. Bots fill it, humans can't
 //     see it. Filled => pretend success, send nothing, store nothing.
-//   - Timing: the page stamps "form_started_at". Missing, absurd, or under
+//   - Timing: the browser reports "form_elapsed_ms" (time the form was open, on
+//     its own clock - never compared with ours). Missing, absurd, or under
 //     MIN_FILL_MS old => rejected.
 //   - Rate limits, counted from accepted rows in `enquiries` over the last
 //     hour: per email, per IP (stored only as a salted hash), and overall.
@@ -129,7 +130,7 @@ Deno.serve(async (req) => {
   }
 
   let name = "", email = "", phone = "", treatment = "", preferred_time = "", message = "";
-  let honeypot = "", startedAtRaw = "";
+  let honeypot = "", elapsedRaw = "", startedAtRaw = "";
   try {
     const form = await req.formData();
     name = String(form.get("name") || "").trim();
@@ -140,6 +141,8 @@ Deno.serve(async (req) => {
     preferred_time = String(form.get("preferred_time") || "").trim();
     message = String(form.get("message") || "").trim();
     honeypot = String(form.get("fax_number") || "").trim();
+    elapsedRaw = String(form.get("form_elapsed_ms") || "").trim();
+    // Legacy: pages loaded before the change sent a start time instead
     startedAtRaw = String(form.get("form_started_at") || "").trim();
   } catch (err) {
     console.error("contact-form: could not parse form data", err);
@@ -152,14 +155,24 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
   }
 
-  // 2. Timing. A visible message here, because a real person on a stale cached
-  // copy of the page (no stamp yet) can hit it and just needs to refresh.
-  const startedAt = Number(startedAtRaw);
-  const age = Date.now() - startedAt;
-  if (!startedAtRaw || !Number.isFinite(startedAt) || age < 0 || age > MAX_FORM_AGE_MS) {
+  // 2. Timing. The browser reports how long the form had been open, measured on
+  // its own clock. (An earlier version compared the visitor's clock with ours,
+  // which locked out anyone whose device clock ran fast.) A visible message
+  // here, because a real person on a stale cached copy of the page can hit it
+  // and just needs to refresh.
+  let fillMs = NaN;
+  if (elapsedRaw) {
+    fillMs = Number(elapsedRaw);
+  } else if (startedAtRaw) {
+    // Legacy page from before the change: its start time is on the visitor's
+    // clock, so a negative age means clock skew, not speed - let it through.
+    const age = Date.now() - Number(startedAtRaw);
+    fillMs = age < 0 ? MIN_FILL_MS : age;
+  }
+  if (!Number.isFinite(fillMs) || fillMs < 0 || fillMs > MAX_FORM_AGE_MS) {
     return new Response(JSON.stringify({ error: "Please refresh the page and try sending your message again." }), { status: 400, headers });
   }
-  if (age < MIN_FILL_MS) {
+  if (fillMs < MIN_FILL_MS) {
     return new Response(JSON.stringify({ error: "That was very quick - please take a moment and try again." }), { status: 400, headers });
   }
 

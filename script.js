@@ -219,10 +219,12 @@ document.querySelectorAll('section').forEach(section => {
 // Contact form AJAX submission
 const contactForm = document.getElementById('contactForm');
 if (contactForm) {
-    // Stamp when the form appeared; the server rejects submissions that arrive
-    // implausibly fast or with no stamp at all (bots that don't run JS).
-    const startedAt = document.getElementById('formStartedAt');
-    if (startedAt) startedAt.value = String(Date.now());
+    // Remember when the form appeared. At submit we send how long it had been
+    // open - measured entirely on this device's own clock, so a visitor whose
+    // clock is wrong still reports a true duration. The server rejects
+    // implausibly quick submissions, and ones with no duration at all (bots
+    // that don't run JS).
+    const loadedAt = Date.now();
 
     contactForm.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -250,6 +252,8 @@ if (contactForm) {
             return;
         }
 
+        const elapsed = document.getElementById('formElapsed');
+        if (elapsed) elapsed.value = String(Date.now() - loadedAt);
         const data = new FormData(contactForm);
         if (submitBtn) submitBtn.disabled = true;
         try {
