@@ -488,6 +488,20 @@
 
         .btn:hover { background: #3A0D0D; }
 
+        .btn-danger { background: #b23a3a; }
+        .btn-danger:hover:not(:disabled) { background: #8a2a2a; }
+        .btn-danger:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .delete-summary {
+            background: rgba(178,58,58,0.08);
+            border-left: 3px solid #b23a3a;
+            border-radius: 0 8px 8px 0;
+            padding: 0.7rem 0.9rem;
+            font-size: 0.85rem;
+            line-height: 1.7;
+            margin-bottom: 0.9rem;
+        }
+
         .btn-outline {
             background: transparent;
             color: #6B1D1D;
@@ -1140,10 +1154,27 @@
         }
         .suggest-list.open { display: block; }
         .suggest-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
             padding: 0.55rem 0.8rem;
             cursor: pointer;
             border-bottom: 1px solid rgba(58,13,13,0.06);
         }
+        .suggest-text { flex: 1; min-width: 0; }
+        .suggest-remove {
+            flex-shrink: 0;
+            width: 1.7rem;
+            height: 1.7rem;
+            border: none;
+            border-radius: 50%;
+            background: none;
+            color: rgba(58,13,13,0.4);
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .suggest-remove:hover { background: rgba(178,58,58,0.14); color: #b23a3a; }
         .suggest-item:last-child { border-bottom: none; }
         .suggest-item.active,
         .suggest-item:hover { background: rgba(201,164,99,0.2); }
@@ -1586,6 +1617,25 @@
             <div class="modal-actions">
                 <button class="btn btn-outline" id="cancel-reschedule">Cancel</button>
                 <button class="btn" id="save-reschedule">Reschedule</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete client modal -->
+    <div class="modal-overlay" id="delete-client-modal-overlay">
+        <div class="modal-card">
+            <h3>Delete Client</h3>
+            <p class="modal-error" id="delete-client-error"></p>
+            <p class="resched-current"><strong id="delete-client-name"></strong></p>
+            <div class="delete-summary" id="delete-client-summary">Counting records…</div>
+            <p style="font-size:0.78rem; color:#6B1D1D; line-height:1.5; margin:0 0 0.9rem 0;">This permanently deletes the client and everything listed above. It cannot be undone. Clinical records are normally kept for 8 years, so this is only for test or mistaken entries.</p>
+            <div id="delete-client-typed" style="display:none;">
+                <label>This client has clinical records. Type their name to confirm</label>
+                <input type="text" id="delete-client-confirm" autocomplete="off">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" id="cancel-delete-client">Keep Client</button>
+                <button class="btn btn-danger" id="confirm-delete-client" disabled>Delete Client</button>
             </div>
         </div>
     </div>
@@ -2222,10 +2272,13 @@
             suggestActive = -1;
             apptSuggest.innerHTML = suggestMatches.map((c, i) => `
                 <div class="suggest-item" role="option" data-i="${i}">
-                    <span class="suggest-name">${escapeHtml(c.name)}</span>
-                    ${c.email
-                        ? `<span class="suggest-email">${escapeHtml(c.email)}</span>`
-                        : '<span class="suggest-email none">no email on file</span>'}
+                    <div class="suggest-text">
+                        <span class="suggest-name">${escapeHtml(c.name)}</span>
+                        ${c.email
+                            ? `<span class="suggest-email">${escapeHtml(c.email)}</span>`
+                            : '<span class="suggest-email none">no email on file</span>'}
+                    </div>
+                    <button type="button" class="suggest-remove" data-remove="${i}" title="Delete this client" aria-label="Delete ${escapeAttr(c.name)}">&times;</button>
                 </div>`).join('');
             apptSuggest.classList.add('open');
         }
@@ -2276,6 +2329,11 @@
             const item = e.target.closest('.suggest-item');
             if (!item) return;
             e.preventDefault();
+            // The x opens the delete dialog instead of choosing the person
+            if (e.target.closest('.suggest-remove')) {
+                openDeleteClient(suggestMatches[Number(item.dataset.i)].name);
+                return;
+            }
             chooseClient(suggestMatches[Number(item.dataset.i)]);
         });
 
@@ -3471,6 +3529,123 @@
         }
 
         document.getElementById('client-back-btn').addEventListener('click', showClientsList);
+
+        // ---------- Delete a client from the New Appointment name suggestions ----------
+        // Each suggestion has an x. It removes the person and everything attached to
+        // their name: appointments, consent / medical / treatment forms, photo
+        // records and the photo files. Matched case-insensitively, because the
+        // suggestions treat "Test" and "test" as one person.
+        const deleteClientModal = document.getElementById('delete-client-modal-overlay');
+        const deleteClientConfirmInput = document.getElementById('delete-client-confirm');
+        const deleteClientBtn = document.getElementById('confirm-delete-client');
+        let deletingClientName = null;
+        let deletingPhotoPaths = [];
+        let deleteSummaryReady = false;
+        let deleteNeedsTyping = false;
+
+        const escapeLike = s => s.replace(/[\\%_]/g, '\\$&');
+
+        // A test entry (just an appointment or a profile) deletes on one click. Anyone
+        // with forms or photos - real clinical records - must have their name typed.
+        function updateDeleteClientButton() {
+            const typedOk = !deleteNeedsTyping ||
+                deleteClientConfirmInput.value.trim().toLowerCase() === (deletingClientName || '').trim().toLowerCase();
+            deleteClientBtn.disabled = !(deleteSummaryReady && deletingClientName && typedOk);
+        }
+        deleteClientConfirmInput.addEventListener('input', updateDeleteClientButton);
+
+        async function openDeleteClient(name) {
+            deletingClientName = name;
+            deletingPhotoPaths = [];
+            deleteSummaryReady = false;
+            deleteNeedsTyping = false;
+            document.getElementById('delete-client-typed').style.display = 'none';
+            document.getElementById('delete-client-name').textContent = name;
+            document.getElementById('delete-client-error').classList.remove('active');
+            const summary = document.getElementById('delete-client-summary');
+            summary.textContent = 'Counting records…';
+            deleteClientConfirmInput.value = '';
+            updateDeleteClientButton();
+            deleteClientModal.classList.add('active');
+
+            // Count first, so she sees exactly what will go before she confirms
+            const like = escapeLike(name);
+            const [forms, appts, photos] = await Promise.all([
+                supabaseClient.from('consent_records').select('id', { count: 'exact', head: true }).ilike('client_name', like),
+                supabaseClient.from('appointments').select('id', { count: 'exact', head: true }).ilike('client_name', like),
+                supabaseClient.from('client_photos').select('path').ilike('client_name', like)
+            ]);
+            if (deletingClientName !== name) return; // dialog was closed or reopened meanwhile
+
+            if (forms.error || appts.error || photos.error) {
+                summary.textContent = 'Could not check what this client has on file, so deleting is switched off. Please try again.';
+                return;
+            }
+            deletingPhotoPaths = (photos.data || []).map(p => p.path);
+            const nForms = forms.count || 0, nAppts = appts.count || 0, nPhotos = deletingPhotoPaths.length;
+            const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+            summary.innerHTML =
+                `<strong>This will permanently delete:</strong><br>` +
+                `• ${plural(nAppts, 'appointment')}<br>` +
+                `• ${plural(nForms, 'form')} (consent, medical history and treatment records)<br>` +
+                `• ${plural(nPhotos, 'photo')}<br>` +
+                `• the client profile`;
+            deleteSummaryReady = true;
+            deleteNeedsTyping = nForms > 0 || nPhotos > 0;
+            document.getElementById('delete-client-typed').style.display = deleteNeedsTyping ? 'block' : 'none';
+            updateDeleteClientButton();
+            if (deleteNeedsTyping) deleteClientConfirmInput.focus();
+        }
+
+        document.getElementById('cancel-delete-client').addEventListener('click', () => {
+            deletingClientName = null;
+            deleteClientModal.classList.remove('active');
+        });
+
+        deleteClientBtn.addEventListener('click', async () => {
+            const name = deletingClientName;
+            const errorEl = document.getElementById('delete-client-error');
+            if (!name || deleteClientBtn.disabled) return;
+            deleteClientBtn.disabled = true;
+            errorEl.classList.remove('active');
+
+            const fail = (msg) => {
+                errorEl.textContent = msg;
+                errorEl.classList.add('active');
+                // Show whatever did get deleted before the problem
+                loadClients(); loadDashboard(); loadAgenda(); renderCalendar(); loadConsentRecords();
+            };
+
+            const like = escapeLike(name);
+
+            // Photo files first: if they can't be removed we stop, rather than
+            // delete the records and leave patient photos orphaned in storage.
+            if (deletingPhotoPaths.length) {
+                const { error } = await supabaseClient.storage.from(PHOTO_BUCKET).remove(deletingPhotoPaths);
+                if (error) { fail('Could not delete the photo files, so nothing else was deleted: ' + error.message); return; }
+            }
+
+            for (const [table, column] of [
+                ['client_photos', 'client_name'],
+                ['consent_records', 'client_name'],
+                ['appointments', 'client_name'],
+                ['clients', 'name']
+            ]) {
+                const { error } = await supabaseClient.from(table).delete().ilike(column, like);
+                if (error) { fail(`Stopped part-way - could not delete from ${table}: ${error.message}`); return; }
+            }
+
+            deletingClientName = null;
+            deleteClientModal.classList.remove('active');
+            // Only leave a profile that was for this very person
+            if (currentClientName && currentClientName.trim().toLowerCase() === name.trim().toLowerCase()) {
+                showClientsList();
+                currentClientName = null;
+            }
+            loadClients(); loadDashboard(); loadAgenda(); renderCalendar(); loadConsentRecords();
+            // Back in the New Appointment box: refresh the suggestions so they're gone
+            loadClientIndex().then(renderSuggestions);
+        });
 
         document.getElementById('client-attach-medical').addEventListener('click', () => {
             openConsentForm('medical', {
