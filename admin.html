@@ -1121,6 +1121,36 @@
             background: #fff;
         }
 
+        /* Client name suggestions in the New Appointment dialog */
+        .suggest-wrap { position: relative; margin-bottom: 1rem; }
+        .suggest-wrap input { margin-bottom: 0; }
+        .suggest-list {
+            display: none;
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: calc(100% + 4px);
+            z-index: 5;
+            background: #fff;
+            border: 1px solid rgba(58,13,13,0.2);
+            border-radius: 10px;
+            box-shadow: 0 10px 28px rgba(58,13,13,0.18);
+            max-height: 14rem;
+            overflow-y: auto;
+        }
+        .suggest-list.open { display: block; }
+        .suggest-item {
+            padding: 0.55rem 0.8rem;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(58,13,13,0.06);
+        }
+        .suggest-item:last-child { border-bottom: none; }
+        .suggest-item.active,
+        .suggest-item:hover { background: rgba(201,164,99,0.2); }
+        .suggest-name { display: block; font-size: 0.88rem; font-weight: 600; }
+        .suggest-email { display: block; font-size: 0.72rem; color: #6B1D1D; }
+        .suggest-email.none { color: rgba(58,13,13,0.45); font-style: italic; }
+
         .modal-actions {
             display: flex;
             gap: 0.7rem;
@@ -1515,7 +1545,10 @@
             <h3>New Appointment</h3>
             <p class="modal-error" id="appointment-error"></p>
             <label>Client Name</label>
-            <input type="text" id="appt-client-name">
+            <div class="suggest-wrap">
+                <input type="text" id="appt-client-name" autocomplete="off" placeholder="Start typing a name">
+                <div class="suggest-list" id="appt-suggest" role="listbox"></div>
+            </div>
             <label>Treatment</label>
             <input type="text" id="appt-treatment" placeholder="e.g. Anti-wrinkle">
             <label>Date</label>
@@ -2131,22 +2164,144 @@
 
         // ---------- New Appointment modal ----------
         const appointmentModal = document.getElementById('appointment-modal-overlay');
-        document.getElementById('open-appointment-modal').addEventListener('click', () => {
-            appointmentModal.classList.add('active');
-        });
-        document.getElementById('cancel-appointment-modal').addEventListener('click', () => {
-            appointmentModal.classList.remove('active');
+        const apptNameInput = document.getElementById('appt-client-name');
+        const apptEmailInput = document.getElementById('appt-email');
+        const apptSuggest = document.getElementById('appt-suggest');
+
+        // Everyone we know, for the name suggestions: client profiles first, then
+        // anyone who only appears on an appointment or a consent form. The email
+        // comes from the profile, or failing that the most recent appointment
+        // that has one saved.
+        let clientIndex = [];
+        let suggestMatches = [];
+        let suggestActive = -1;
+        let autoFilledEmail = null; // an email WE put in the box, as opposed to one Rica typed
+        let pickedName = '';
+
+        async function loadClientIndex() {
+            const [clientsRes, apptsRes, formsRes] = await Promise.all([
+                supabaseClient.from('clients').select('name, email'),
+                supabaseClient.from('appointments').select('client_name, client_email')
+                    .order('created_at', { ascending: false }).limit(1000),
+                supabaseClient.from('consent_records').select('client_name')
+            ]);
+            const byKey = new Map(); // lower-cased name -> { name, email }
+            const add = (name, email) => {
+                const n = (name || '').trim();
+                if (!n) return;
+                const key = n.toLowerCase();
+                const existing = byKey.get(key);
+                if (!existing) byKey.set(key, { name: n, email: (email || '').trim() });
+                else if (!existing.email && email) existing.email = email.trim();
+            };
+            (clientsRes.data || []).forEach(c => add(c.name, c.email));
+            (apptsRes.data || []).forEach(a => add(a.client_name, a.client_email));
+            (formsRes.data || []).forEach(f => add(f.client_name, null));
+            clientIndex = Array.from(byKey.values()).sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        function hideSuggestions() {
+            apptSuggest.classList.remove('open');
+            suggestActive = -1;
+        }
+
+        // Suggestions appear from the first letter, and match the start of the full
+        // name or of any word in it, so typing a surname finds "Jane Smith" too.
+        // With one letter that can be a lot of people, so names that START with
+        // the letters come first, and the list scrolls if there are more.
+        function renderSuggestions() {
+            const q = apptNameInput.value.trim().toLowerCase();
+            if (q.length < 1) { hideSuggestions(); return; }
+            const startsWithQ = c => c.name.toLowerCase().startsWith(q);
+            suggestMatches = clientIndex
+                .filter(c => startsWithQ(c) || c.name.toLowerCase().split(/\s+/).some(w => w.startsWith(q)))
+                .sort((a, b) => (startsWithQ(b) - startsWithQ(a)) || a.name.localeCompare(b.name))
+                .slice(0, 12);
+            if (!suggestMatches.length) { hideSuggestions(); return; }
+
+            suggestActive = -1;
+            apptSuggest.innerHTML = suggestMatches.map((c, i) => `
+                <div class="suggest-item" role="option" data-i="${i}">
+                    <span class="suggest-name">${escapeHtml(c.name)}</span>
+                    ${c.email
+                        ? `<span class="suggest-email">${escapeHtml(c.email)}</span>`
+                        : '<span class="suggest-email none">no email on file</span>'}
+                </div>`).join('');
+            apptSuggest.classList.add('open');
+        }
+
+        function setActiveSuggestion(i) {
+            const items = apptSuggest.querySelectorAll('.suggest-item');
+            if (!items.length) return;
+            suggestActive = (i + items.length) % items.length;
+            items.forEach((el, idx) => el.classList.toggle('active', idx === suggestActive));
+            items[suggestActive].scrollIntoView({ block: 'nearest' });
+        }
+
+        // Choosing someone fills in their name and email. The email box is only
+        // replaced if it is empty or holds an address we filled in ourselves, so
+        // one Rica typed by hand is never overwritten - and picking a second
+        // person never leaves the first person's address behind.
+        function chooseClient(c) {
+            apptNameInput.value = c.name;
+            pickedName = c.name;
+            const current = apptEmailInput.value.trim();
+            if (!current || current === autoFilledEmail) {
+                apptEmailInput.value = c.email || '';
+                autoFilledEmail = c.email || null;
+            }
+            hideSuggestions();
+        }
+
+        apptNameInput.addEventListener('input', () => {
+            // If she edits the name after picking someone, their address no longer applies
+            if (autoFilledEmail && apptNameInput.value.trim().toLowerCase() !== pickedName.toLowerCase()
+                && apptEmailInput.value.trim() === autoFilledEmail) {
+                apptEmailInput.value = '';
+                autoFilledEmail = null;
+            }
+            renderSuggestions();
         });
 
-        // Prefill the email field from an existing client record when the
-        // typed name matches one — saves retyping, never overwrites a value
-        // Rica has already typed in herself.
-        document.getElementById('appt-client-name').addEventListener('blur', async function() {
-            const name = this.value.trim();
-            const emailField = document.getElementById('appt-email');
-            if (!name || emailField.value.trim()) return;
-            const { data } = await supabaseClient.from('clients').select('email').ilike('name', name).maybeSingle();
-            if (data && data.email) emailField.value = data.email;
+        apptNameInput.addEventListener('keydown', (e) => {
+            if (!apptSuggest.classList.contains('open')) return;
+            if (e.key === 'ArrowDown') { e.preventDefault(); setActiveSuggestion(suggestActive + 1); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveSuggestion(suggestActive - 1); }
+            else if (e.key === 'Enter' && suggestActive >= 0) { e.preventDefault(); chooseClient(suggestMatches[suggestActive]); }
+            else if (e.key === 'Escape') { hideSuggestions(); }
+        });
+
+        // mousedown (not click) so the name box doesn't lose focus and close the list first
+        apptSuggest.addEventListener('mousedown', (e) => {
+            const item = e.target.closest('.suggest-item');
+            if (!item) return;
+            e.preventDefault();
+            chooseClient(suggestMatches[Number(item.dataset.i)]);
+        });
+
+        apptNameInput.addEventListener('blur', () => {
+            hideSuggestions();
+            // Typed a full name that matches someone exactly without picking them?
+            // Still fill their email in, if the box is empty.
+            const typed = apptNameInput.value.trim().toLowerCase();
+            const match = clientIndex.find(c => c.name.toLowerCase() === typed);
+            if (match && match.email && !apptEmailInput.value.trim()) {
+                pickedName = match.name;
+                apptEmailInput.value = match.email;
+                autoFilledEmail = match.email;
+            }
+        });
+
+        document.getElementById('open-appointment-modal').addEventListener('click', () => {
+            autoFilledEmail = null;
+            pickedName = '';
+            hideSuggestions();
+            appointmentModal.classList.add('active');
+            loadClientIndex(); // fresh every time, so a client added a minute ago is there
+        });
+        document.getElementById('cancel-appointment-modal').addEventListener('click', () => {
+            hideSuggestions();
+            appointmentModal.classList.remove('active');
         });
 
         document.getElementById('save-appointment').addEventListener('click', async () => {
