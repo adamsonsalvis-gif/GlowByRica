@@ -488,6 +488,32 @@
 
         .btn:hover { background: #3A0D0D; }
 
+        .search-input {
+            width: 100%;
+            padding: 0.65rem 0.9rem;
+            border-radius: 10px;
+            border: 1px solid rgba(58,13,13,0.2);
+            font-family: "Quicksand", sans-serif;
+            font-size: 0.9rem;
+            background: #fff;
+            margin-bottom: 1rem;
+        }
+
+        .clickable-row { cursor: pointer; }
+        .clickable-row:hover td { background: rgba(201,164,99,0.12); }
+
+        /* Client picker for a new consent form */
+        .picker-list {
+            max-height: 17rem;
+            overflow-y: auto;
+            background: #fff;
+            border: 1px solid rgba(58,13,13,0.2);
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+        .picker-empty { padding: 0.9rem; font-size: 0.82rem; color: #6B1D1D; text-align: center; }
+        .picker-new { color: #6B1D1D; font-weight: 600; }
+
         .btn-danger { background: #b23a3a; }
         .btn-danger:hover:not(:disabled) { background: #8a2a2a; }
         .btn-danger:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -1418,10 +1444,11 @@
                         </div>
 
                         <div class="table-card">
-                            <h3>Completed Forms</h3>
+                            <h3>Clients</h3>
+                            <input type="search" id="consent-search" class="search-input" placeholder="Search clients by name" autocomplete="off">
                             <table>
                                 <thead>
-                                    <tr><th>Client</th><th>Form</th><th>Date</th><th></th></tr>
+                                    <tr><th>Client</th><th>Forms</th><th>Last form</th><th></th></tr>
                                 </thead>
                                 <tbody id="consent-records-tbody">
                                     <tr><td colspan="4" class="empty-state">Loading…</td></tr>
@@ -1617,6 +1644,18 @@
             <div class="modal-actions">
                 <button class="btn btn-outline" id="cancel-reschedule">Cancel</button>
                 <button class="btn" id="save-reschedule">Reschedule</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pick a client for a new consent form -->
+    <div class="modal-overlay" id="client-picker-overlay">
+        <div class="modal-card">
+            <h3>Who is this form for?</h3>
+            <input type="search" id="client-picker-search" class="search-input" placeholder="Search clients by name" autocomplete="off" style="margin-bottom:0.7rem;">
+            <div class="picker-list" id="client-picker-list" role="listbox"></div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" id="cancel-client-picker">Cancel</button>
             </div>
         </div>
     </div>
@@ -1963,7 +2002,7 @@
             container.querySelectorAll('.list-row.clickable').forEach(row => {
                 const open = () => {
                     switchView('clients');
-                    openClientProfile(row.dataset.client);
+                    openClientProfile(row.dataset.client, null);
                 };
                 row.addEventListener('click', open);
                 row.addEventListener('keydown', e => {
@@ -2165,33 +2204,52 @@
             renderCalendar();
         });
 
+        // The Consent Forms page lists CLIENTS (one row each, with how many forms they
+        // have); clicking a name opens their profile, where all their forms are.
+        let consentClientRows = []; // [{ name, count, last }]
+
         async function loadConsentRecords() {
             const { data } = await supabaseClient
                 .from('consent_records')
-                .select('id, client_name, template_key, created_at')
+                .select('client_name, created_at')
                 .order('created_at', { ascending: false });
 
-            const tbody = document.getElementById('consent-records-tbody');
-            tbody.innerHTML = (data && data.length)
-                ? data.map(c => `
-                    <tr>
-                        <td>${escapeHtml(c.client_name)}</td>
-                        <td>${CONSENT_TEMPLATES[c.template_key] ? CONSENT_TEMPLATES[c.template_key].shortName : escapeHtml(c.template_key)}</td>
-                        <td>${formatDate(c.created_at.slice(0, 10))}</td>
-                        <td>
-                            <button class="icon-btn" data-record-id="${c.id}" title="View"><i class="fa-solid fa-eye"></i></button>
-                            <button class="icon-btn" data-delete-id="${c.id}" data-delete-name="${escapeAttr(c.client_name)}" title="Delete"><i class="fa-solid fa-trash"></i></button>
-                        </td>
-                    </tr>`).join('')
-                : '<tr><td colspan="4" class="empty-state">No consent forms yet.</td></tr>';
-
-            tbody.querySelectorAll('[data-record-id]').forEach(btn => {
-                btn.addEventListener('click', () => viewConsentRecord(btn.dataset.recordId));
+            // Grouped by exact name, the same way the client profile finds its forms
+            const byName = new Map();
+            (data || []).forEach(r => {
+                const m = byName.get(r.client_name);
+                if (!m) byName.set(r.client_name, { name: r.client_name, count: 1, last: r.created_at });
+                else { m.count++; if (r.created_at > m.last) m.last = r.created_at; }
             });
-            tbody.querySelectorAll('[data-delete-id]').forEach(btn => {
-                btn.addEventListener('click', () => deleteConsentRecord(btn.dataset.deleteId, btn.dataset.deleteName));
+            consentClientRows = Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name));
+            renderConsentClientList();
+        }
+
+        function renderConsentClientList() {
+            const q = document.getElementById('consent-search').value.trim().toLowerCase();
+            const rows = q ? consentClientRows.filter(c => c.name.toLowerCase().includes(q)) : consentClientRows;
+
+            const tbody = document.getElementById('consent-records-tbody');
+            tbody.innerHTML = rows.length
+                ? rows.map(c => `
+                    <tr class="clickable-row" data-client="${escapeAttr(c.name)}">
+                        <td><strong>${escapeHtml(c.name)}</strong></td>
+                        <td>${c.count}</td>
+                        <td>${formatDate(c.last.slice(0, 10))}</td>
+                        <td><button class="icon-btn" title="Open profile"><i class="fa-solid fa-folder-open"></i></button></td>
+                    </tr>`).join('')
+                : `<tr><td colspan="4" class="empty-state">${q ? 'No clients match your search.' : 'No consent forms yet.'}</td></tr>`;
+
+            tbody.querySelectorAll('tr[data-client]').forEach(tr => {
+                // 'consent' tells the profile's Back button to return to this page
+                tr.addEventListener('click', () => {
+                    switchView('clients');
+                    openClientProfile(tr.dataset.client, 'consent');
+                });
             });
         }
+
+        document.getElementById('consent-search').addEventListener('input', renderConsentClientList);
 
         async function deleteConsentRecord(id, clientName, fromProfile) {
             if (!confirm(`Delete this form for ${clientName}? This cannot be undone.`)) return;
@@ -3416,10 +3474,92 @@
         let chooserPrefill = null;
         let chooserReturn = null;
 
-        document.getElementById('open-consent-modal').addEventListener('click', () => {
-            chooserPrefill = null;
-            chooserReturn = null;
+        // New Consent Form: first choose WHICH client it is for (with search), then
+        // the treatment. Reuses the same list of known people as the New Appointment
+        // name suggestions (profiles, plus anyone on an appointment or a form).
+        const clientPicker = document.getElementById('client-picker-overlay');
+        const pickerSearch = document.getElementById('client-picker-search');
+        const pickerList = document.getElementById('client-picker-list');
+        let pickerItems = [];   // what is currently listed: { name, email, isNew }
+        let pickerActive = -1;
+
+        function renderClientPicker() {
+            const raw = pickerSearch.value.replace(/\s+/g, ' ').trim();
+            const q = raw.toLowerCase();
+            const startsWithQ = c => c.name.toLowerCase().startsWith(q);
+            pickerItems = clientIndex
+                .filter(c => !q || c.name.toLowerCase().includes(q))
+                .sort((a, b) => (startsWithQ(b) - startsWithQ(a)) || a.name.localeCompare(b.name))
+                .map(c => ({ name: c.name, email: c.email, isNew: false }));
+
+            // Someone with no record yet (a first visit): offer to use the typed name
+            if (q && !clientIndex.some(c => c.name.toLowerCase() === q)) {
+                pickerItems.push({ name: raw, email: '', isNew: true });
+            }
+            pickerActive = -1;
+
+            pickerList.innerHTML = pickerItems.length
+                ? pickerItems.map((c, i) => c.isNew
+                    ? `<div class="suggest-item" role="option" data-i="${i}">
+                           <div class="suggest-text"><span class="suggest-name picker-new">+ New client: ${escapeHtml(c.name)}</span></div>
+                       </div>`
+                    : `<div class="suggest-item" role="option" data-i="${i}">
+                           <div class="suggest-text">
+                               <span class="suggest-name">${escapeHtml(c.name)}</span>
+                               ${c.email
+                                   ? `<span class="suggest-email">${escapeHtml(c.email)}</span>`
+                                   : '<span class="suggest-email none">no email on file</span>'}
+                           </div>
+                       </div>`).join('')
+                : '<div class="picker-empty">No clients yet. Type a name to add one.</div>';
+        }
+
+        function setPickerActive(i) {
+            const items = pickerList.querySelectorAll('.suggest-item');
+            if (!items.length) return;
+            pickerActive = (i + items.length) % items.length;
+            items.forEach((el, idx) => el.classList.toggle('active', idx === pickerActive));
+            items[pickerActive].scrollIntoView({ block: 'nearest' });
+        }
+
+        // Picked someone: on to the treatment choice, with their name already in the form.
+        // After saving she lands on their profile, where the new form now shows, and Back
+        // from there returns to the Consent Forms page.
+        function chooseClientForForm(item) {
+            clientPicker.classList.remove('active');
+            currentClientName = item.name;
+            profileReturnView = 'consent';
+            chooserPrefill = { patient_name: item.name };
+            chooserReturn = 'clients';
             consentModal.classList.add('active');
+        }
+
+        document.getElementById('open-consent-modal').addEventListener('click', async () => {
+            pickerSearch.value = '';
+            pickerList.innerHTML = '<div class="picker-empty">Loading clients…</div>';
+            clientPicker.classList.add('active');
+            pickerSearch.focus();
+            await loadClientIndex(); // fresh each time, so someone added a minute ago is there
+            renderClientPicker();
+        });
+
+        pickerSearch.addEventListener('input', renderClientPicker);
+        pickerSearch.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown') { e.preventDefault(); setPickerActive(pickerActive + 1); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); setPickerActive(pickerActive - 1); }
+            else if (e.key === 'Enter') {
+                e.preventDefault();
+                // With one match on screen, Enter takes it; otherwise use the highlighted one
+                const i = pickerActive >= 0 ? pickerActive : (pickerItems.length === 1 ? 0 : -1);
+                if (i >= 0) chooseClientForForm(pickerItems[i]);
+            }
+        });
+        pickerList.addEventListener('click', (e) => {
+            const row = e.target.closest('.suggest-item');
+            if (row) chooseClientForForm(pickerItems[Number(row.dataset.i)]);
+        });
+        document.getElementById('cancel-client-picker').addEventListener('click', () => {
+            clientPicker.classList.remove('active');
         });
         document.getElementById('cancel-consent-modal').addEventListener('click', () => {
             consentModal.classList.remove('active');
@@ -3433,6 +3573,10 @@
 
         // ==================== Clients ====================
         let currentClientName = null;
+        // Where the profile's Back button returns to: 'consent' if she opened it from the
+        // Consent Forms page, otherwise the Clients list. Re-opening the same profile (after
+        // a delete or a reschedule) passes no value and keeps whatever it was.
+        let profileReturnView = null;
         const clientsListPanel = document.getElementById('clients-list-panel');
         const clientProfilePanel = document.getElementById('client-profile-panel');
 
@@ -3470,11 +3614,12 @@
                 : '<tr><td colspan="4" class="empty-state">No clients yet — profiles appear when a form is saved.</td></tr>';
 
             tbody.querySelectorAll('[data-client]').forEach(btn => {
-                btn.addEventListener('click', () => openClientProfile(btn.dataset.client));
+                btn.addEventListener('click', () => openClientProfile(btn.dataset.client, null));
             });
         }
 
-        async function openClientProfile(name) {
+        async function openClientProfile(name, returnView) {
+            if (returnView !== undefined) profileReturnView = returnView;
             currentClientName = name;
             clientsListPanel.style.display = 'none';
             clientProfilePanel.style.display = 'block';
@@ -3528,7 +3673,12 @@
             wireRescheduleButtons(apptsEl);
         }
 
-        document.getElementById('client-back-btn').addEventListener('click', showClientsList);
+        document.getElementById('client-back-btn').addEventListener('click', () => {
+            showClientsList();
+            // Opened from the Consent Forms page? Go back there, not to the Clients list.
+            if (profileReturnView === 'consent') switchView('consent');
+            profileReturnView = null;
+        });
 
         // ---------- Delete a client from the New Appointment name suggestions ----------
         // Each suggestion has an x. It removes the person and everything attached to
