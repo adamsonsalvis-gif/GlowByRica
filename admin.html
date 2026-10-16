@@ -395,6 +395,41 @@
             text-decoration: line-through;
         }
 
+        /* Part of the day blocked (Morning / Afternoon / Evening) */
+        .calendar-cell.part-blocked {
+            background: linear-gradient(to bottom, rgba(178,58,58,0) 62%, rgba(178,58,58,0.22) 62%);
+            color: #b23a3a;
+        }
+
+        /* Availability panel under the day's appointments */
+        #availability-panel { margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid rgba(58,13,13,0.08); }
+        .avail-title { font-size: 0.8rem; font-weight: 600; margin-bottom: 0.6rem; }
+        .avail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        .avail-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.1rem;
+            padding: 0.55rem 0.4rem;
+            background: #fff;
+            border: 1px solid rgba(107,29,29,0.3);
+            border-radius: 10px;
+            color: #3A0D0D;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        .avail-btn:hover:not(:disabled) { background: rgba(201,164,99,0.18); }
+        .avail-whole { grid-column: 1 / -1; }
+        .avail-name { font-size: 0.82rem; font-weight: 600; }
+        .avail-hours { font-size: 0.68rem; color: #6B1D1D; }
+        .avail-state { font-size: 0.68rem; color: #4a7a5a; }
+        .avail-btn.blocked { background: rgba(178,58,58,0.12); border-color: rgba(178,58,58,0.55); }
+        .avail-btn.blocked .avail-name { color: #b23a3a; text-decoration: line-through; }
+        .avail-btn.blocked .avail-state { color: #b23a3a; font-weight: 600; }
+        .avail-btn:disabled { cursor: default; opacity: 0.7; }
+        .avail-hint { font-size: 0.7rem; color: #6B1D1D; margin: 0.6rem 0 0 0; line-height: 1.5; }
+
         .agenda-card {
             background: #fff;
             border-radius: 16px;
@@ -1299,7 +1334,16 @@
                             <div id="agenda-list">
                                 <p class="empty-state">Loading…</p>
                             </div>
-                            <button class="btn btn-outline" id="block-day-btn" style="display:none; margin-top:1rem; width:100%; justify-content:center;">Block this day</button>
+                            <div id="availability-panel" style="display:none;">
+                                <div class="avail-title">Availability on <span id="avail-date"></span></div>
+                                <div class="avail-grid">
+                                    <button type="button" class="avail-btn avail-whole" data-block="day"><span class="avail-name">Whole day</span><span class="avail-state"></span></button>
+                                    <button type="button" class="avail-btn" data-block="morning"><span class="avail-name">Morning</span><span class="avail-hours">9am - 12pm</span><span class="avail-state"></span></button>
+                                    <button type="button" class="avail-btn" data-block="afternoon"><span class="avail-name">Afternoon</span><span class="avail-hours">12pm - 5pm</span><span class="avail-state"></span></button>
+                                    <button type="button" class="avail-btn" data-block="evening"><span class="avail-name">Evening</span><span class="avail-hours">5pm - 9pm</span><span class="avail-state"></span></button>
+                                </div>
+                                <p class="avail-hint">Tap to block or unblock. Blocked times can't be chosen on the website.</p>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -1885,40 +1929,70 @@
             e.preventDefault();
             selectedCalendarDate = null;
             document.querySelectorAll('.calendar-cell.selected').forEach(c => c.classList.remove('selected'));
-            updateBlockDayButton();
+            updateAvailabilityPanel();
             loadAgenda();
         });
 
-        // ---------- Day blocking (days Rica works elsewhere) ----------
+        // ---------- Blocking time off (days or parts of days Rica works elsewhere) ----------
+        // A whole day lives in blocked_days; Morning / Afternoon / Evening live in
+        // blocked_periods. The website's booking calendar picks both up by itself.
         let blockedDaysSet = new Set();
-        const blockDayBtn = document.getElementById('block-day-btn');
+        let blockedPeriodsMap = new Map(); // 'YYYY-MM-DD' -> Set('morning' | 'afternoon' | 'evening')
+        const availabilityPanel = document.getElementById('availability-panel');
 
-        function updateBlockDayButton() {
-            if (!selectedCalendarDate) {
-                blockDayBtn.style.display = 'none';
-                return;
-            }
-            blockDayBtn.style.display = 'inline-flex';
-            blockDayBtn.textContent = blockedDaysSet.has(selectedCalendarDate)
-                ? 'Unblock this day'
-                : 'Block this day';
+        // Which period an appointment time falls in (same split as the website)
+        function periodOfTime(timeStr) {
+            const h = parseInt((timeStr || '').split(':')[0], 10);
+            if (h >= 17) return 'evening';
+            if (h >= 12) return 'afternoon';
+            return 'morning';
         }
 
-        blockDayBtn.addEventListener('click', async () => {
-            if (!selectedCalendarDate) return;
-            blockDayBtn.disabled = true;
-
-            const { error } = blockedDaysSet.has(selectedCalendarDate)
-                ? await supabaseClient.from('blocked_days').delete().eq('day', selectedCalendarDate)
-                : await supabaseClient.from('blocked_days').insert({ day: selectedCalendarDate });
-
-            blockDayBtn.disabled = false;
-            if (error) {
-                alert('Could not update: ' + error.message);
+        function updateAvailabilityPanel() {
+            if (!selectedCalendarDate) {
+                availabilityPanel.style.display = 'none';
                 return;
             }
+            availabilityPanel.style.display = 'block';
+            document.getElementById('avail-date').textContent = formatDate(selectedCalendarDate);
+
+            const wholeDay = blockedDaysSet.has(selectedCalendarDate);
+            const periods = blockedPeriodsMap.get(selectedCalendarDate) || new Set();
+
+            availabilityPanel.querySelectorAll('[data-block]').forEach(btn => {
+                const key = btn.dataset.block;
+                // With the whole day blocked, the parts are blocked too - show that, and
+                // make Rica unblock the whole day first rather than leave a confusing mix.
+                const isBlocked = key === 'day' ? wholeDay : (wholeDay || periods.has(key));
+                btn.classList.toggle('blocked', isBlocked);
+                btn.disabled = key !== 'day' && wholeDay;
+                btn.querySelector('.avail-state').textContent = isBlocked ? 'Blocked' : 'Open';
+            });
+        }
+
+        availabilityPanel.addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-block]');
+            if (!btn || btn.disabled || !selectedCalendarDate) return;
+
+            const day = selectedCalendarDate;
+            const key = btn.dataset.block;
+            availabilityPanel.querySelectorAll('[data-block]').forEach(b => { b.disabled = true; });
+
+            let result;
+            if (key === 'day') {
+                result = blockedDaysSet.has(day)
+                    ? await supabaseClient.from('blocked_days').delete().eq('day', day)
+                    : await supabaseClient.from('blocked_days').insert({ day });
+            } else {
+                const already = (blockedPeriodsMap.get(day) || new Set()).has(key);
+                result = already
+                    ? await supabaseClient.from('blocked_periods').delete().eq('day', day).eq('period', key)
+                    : await supabaseClient.from('blocked_periods').insert({ day, period: key });
+            }
+
+            if (result.error) alert('Could not update: ' + result.error.message);
             await renderCalendar();
-            updateBlockDayButton();
+            updateAvailabilityPanel(); // also re-enables the buttons
         });
 
         // ---------- Calendar month grid ----------
@@ -1940,15 +2014,22 @@
             const monthStart = `${calendarViewYear}-${String(calendarViewMonth + 1).padStart(2, '0')}-01`;
             const monthEnd = `${calendarViewYear}-${String(calendarViewMonth + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
 
-            const [apptRes, blockedRes] = await Promise.all([
+            const [apptRes, blockedRes, periodsRes] = await Promise.all([
                 supabaseClient.from('appointments').select('appointment_date').neq('status', 'cancelled')
                     .gte('appointment_date', monthStart).lte('appointment_date', monthEnd),
                 supabaseClient.from('blocked_days').select('day')
+                    .gte('day', monthStart).lte('day', monthEnd),
+                supabaseClient.from('blocked_periods').select('day, period')
                     .gte('day', monthStart).lte('day', monthEnd)
             ]);
 
             const bookedDates = new Set((apptRes.data || []).map(a => a.appointment_date));
             blockedDaysSet = new Set((blockedRes.data || []).map(b => b.day));
+            blockedPeriodsMap = new Map();
+            (periodsRes.data || []).forEach(p => {
+                if (!blockedPeriodsMap.has(p.day)) blockedPeriodsMap.set(p.day, new Set());
+                blockedPeriodsMap.get(p.day).add(p.period);
+            });
             const todayStr = todayISO();
 
             // Remove old date cells, keep the 7 day-label headers
@@ -1966,7 +2047,13 @@
                 cell.className = 'calendar-cell';
                 if (dateStr === todayStr) cell.classList.add('today');
                 if (bookedDates.has(dateStr)) cell.classList.add('has-event');
-                if (blockedDaysSet.has(dateStr)) cell.classList.add('blocked');
+                // All three periods blocked is the same as the whole day
+                const blockedParts = blockedPeriodsMap.get(dateStr);
+                if (blockedDaysSet.has(dateStr) || (blockedParts && blockedParts.size === 3)) {
+                    cell.classList.add('blocked');
+                } else if (blockedParts && blockedParts.size > 0) {
+                    cell.classList.add('part-blocked');
+                }
                 if (dateStr === selectedCalendarDate) cell.classList.add('selected');
                 cell.dataset.date = dateStr;
                 cell.innerHTML = bookedDates.has(dateStr) ? `${day}<span class="dot"></span>` : `${day}`;
@@ -1975,7 +2062,7 @@
                     selectedCalendarDate = (selectedCalendarDate === dateStr) ? null : dateStr;
                     grid.querySelectorAll('.calendar-cell.selected').forEach(c => c.classList.remove('selected'));
                     if (selectedCalendarDate) cell.classList.add('selected');
-                    updateBlockDayButton();
+                    updateAvailabilityPanel();
                     loadAgenda();
                 });
 
@@ -2341,8 +2428,10 @@
 
             try {
                 // Rica can always override, but she should know about a problem first
-                const [blockedRes, clashRes] = await Promise.all([
+                const [blockedRes, blockedPartRes, clashRes] = await Promise.all([
                     supabaseClient.from('blocked_days').select('day').eq('day', date).maybeSingle(),
+                    supabaseClient.from('blocked_periods').select('period')
+                        .eq('day', date).eq('period', periodOfTime(time)).maybeSingle(),
                     supabaseClient.from('appointments').select('client_name')
                         .eq('appointment_date', date).eq('appointment_time', time)
                         .neq('status', 'cancelled').neq('id', a.id)
@@ -2350,6 +2439,7 @@
                 const warnings = [];
                 if (date < todayISO()) warnings.push('That date is in the past.');
                 if (blockedRes.data) warnings.push('You have marked that day as unavailable.');
+                else if (blockedPartRes.data) warnings.push(`You have marked that ${blockedPartRes.data.period} as unavailable.`);
                 if (clashRes.data && clashRes.data.length) warnings.push(`${clashRes.data[0].client_name} is already booked at that time.`);
                 if (warnings.length && !confirm(warnings.join('\n') + '\n\nReschedule anyway?')) return;
 
