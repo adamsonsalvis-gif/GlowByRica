@@ -551,14 +551,50 @@
 
         /* Wider than a plain dash and fading at both ends, matching the
            hero divider treatment. */
+        /* Intro under "Our Services": the clinic line in the body font, then the
+           approach as a quieter second line in the same Cinzel style as the hero tagline */
         .services-intro {
-            max-width: 640px;
-            margin: 0 auto 2.5rem;
+            max-width: 700px;
+            margin: 0 auto 3rem;
             text-align: center;
-            font-size: 1rem;
-            line-height: 1.7;
             color: #3A0D0D;
-            text-wrap: balance; /* avoids a single orphaned word on the last line */
+        }
+
+        .services-intro .intro-lead {
+            display: block;
+            font-size: 1.12rem;
+            line-height: 1.75;
+            text-wrap: balance;
+        }
+
+        .services-intro .intro-lead strong {
+            font-family: "Cinzel", serif;
+            font-weight: 700;
+            color: #6B1D1D;
+            letter-spacing: 0.03em;
+        }
+
+        .services-intro .nb { white-space: nowrap; } /* never split "nurse-led" etc. across two lines */
+
+        .services-intro .intro-sub {
+            display: block;
+            margin-top: 0.9rem;
+            font-family: "Cinzel", serif;
+            font-size: 0.92rem;
+            letter-spacing: 0.06em;
+            line-height: 1.8;
+            color: #8a5a3a;
+            text-wrap: balance;
+        }
+
+        /* a small gold mark between the intro and the service cards */
+        .services-intro::after {
+            content: "✦";
+            display: block;
+            margin-top: 1.4rem;
+            color: #C9A463;
+            font-size: 0.9rem;
+            letter-spacing: 0.3em;
         }
 
         .section-divider {
@@ -1681,7 +1717,10 @@
     <section id="services" class="services">
         <h2 class="section-title">Our Services</h2>
         <div class="section-divider"></div>
-        <p class="services-intro">Glow By Rica is a nurse-led aesthetics clinic at Phenix Salon Suites in Derby city centre. Our treatments are consultation-led, tailored to you, and focused on natural-looking results.</p>
+        <p class="services-intro">
+            <span class="intro-lead"><strong>Glow By Rica</strong> is a <span class="nb">nurse-led</span> aesthetics clinic at Phenix Salon Suites in Derby city centre.</span>
+            <span class="intro-sub">Our treatments are <span class="nb">consultation-led</span>, tailored to you, and focused on <span class="nb">natural-looking</span> results.</span>
+        </p>
         <div class="services-grid">
             <div class="service-card" style="background-image: url('images/filler.png'); background-size: cover; background-position: center top; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; min-height: 320px;">
                 <div class="service-card-content">
@@ -1733,7 +1772,7 @@
         <div class="benefits">
             <div class="benefit-item">
                 <h4>Level 7 Qualified</h4>
-                <p>Holds a Level 7 Diploma in Advanced Combined Filler & Anti-Wrinkle Injections, accredited by OTHM through Derma Institute</p>
+                <p>Holds an OTHM Level 7 Diploma in Clinical Aesthetic Injectable Therapies, gained through Derma Institute</p>
             </div>
             <div class="benefit-item">
                 <h4>Premium Products</h4>
