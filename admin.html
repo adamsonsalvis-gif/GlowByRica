@@ -985,6 +985,7 @@
 
         .cp-facemap-tools {
             display: flex;
+            flex-wrap: wrap; /* one more button now, so let a narrow screen wrap rather than overflow */
             gap: 0.7rem;
             align-items: center;
             justify-content: center;
@@ -3043,13 +3044,14 @@
                         ${ro ? '' : `<div class="cp-facemap-tools">
                             <button type="button" class="cp-tool active" data-tool="draw" title="Draw"><i class="fa-solid fa-pencil"></i></button>
                             <button type="button" class="cp-tool" data-tool="text" title="Add text"><i class="fa-solid fa-font"></i></button>
+                            <button type="button" class="cp-tool" data-tool="erase" title="Eraser"><i class="fa-solid fa-eraser"></i></button>
                             <button type="button" class="cp-pen active" data-pen="#6B1D1D" style="background:#6B1D1D;" title="Maroon"></button>
                             <button type="button" class="cp-pen" data-pen="#C0392B" style="background:#C0392B;" title="Red"></button>
                             <button type="button" class="cp-pen" data-pen="#2E5FA3" style="background:#2E5FA3;" title="Blue"></button>
                             <button type="button" class="cp-tool" data-undo="${sec.k}" title="Undo"><i class="fa-solid fa-rotate-left"></i></button>
                             <button type="button" class="cp-sig-clear" data-sig-clear="${sec.k}">clear</button>
                         </div>
-                        <div class="cp-facemap-hint">Draw with finger or Apple Pencil, or pick the text tool and tap to type amounts.</div>`}
+                        <div class="cp-facemap-hint">Draw with finger or Apple Pencil, or pick the text tool and tap to type amounts. Use the eraser to rub out pencil marks.</div>`}
                     </div>`;
                 } else if (sec.t === 'sigs') {
                     html += `<hr class="cp-divider">`;
@@ -3149,6 +3151,19 @@
                     }
 
                     if (isFacemap) pushHistory(pad);
+
+                    // Eraser: paint with "destination-out", which removes what is already
+                    // on the drawing layer instead of adding to it, with a much fatter
+                    // stroke than the pencil. Undo works as usual (it snapshots first).
+                    if (isFacemap && pad.mode === 'erase') {
+                        ctx.globalCompositeOperation = 'destination-out';
+                        ctx.lineWidth = 18;
+                    } else {
+                        ctx.globalCompositeOperation = 'source-over';
+                        ctx.lineWidth = isFacemap ? 3 : 2;
+                        ctx.strokeStyle = pad.color;
+                    }
+
                     canvas.setPointerCapture(e.pointerId);
                     pad.drawing = true;
                     ctx.beginPath();
@@ -3190,6 +3205,12 @@
                     if (pad) {
                         pad.ctx.strokeStyle = btn.dataset.pen;
                         pad.color = btn.dataset.pen;
+                        // Picking a colour while the eraser is on means "back to drawing"
+                        if (pad.mode === 'erase') {
+                            pad.mode = 'draw';
+                            tools.querySelectorAll('[data-tool]').forEach(b =>
+                                b.classList.toggle('active', b.dataset.tool === 'draw'));
+                        }
                     }
                 });
             });
