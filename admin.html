@@ -468,6 +468,7 @@
         .agenda-item.cancelled .agenda-details { opacity: 0.5; }
         .agenda-item.cancelled .agenda-details .name { text-decoration: line-through; }
         .cancelled-tag { color: #b23a3a; font-weight: 600; }
+        .review-tag { color: #4a7a5a; font-weight: 600; }
 
         .btn {
             display: inline-flex;
@@ -601,6 +602,7 @@
         /* Reschedule + delete sit together at the right of an appointment row */
         .appt-actions {
             display: flex;
+            flex-wrap: wrap; /* four buttons on a past appointment: wrap rather than overflow the card */
             align-items: center;
             gap: 0.5rem;
             align-self: center;
@@ -1673,6 +1675,22 @@
         </div>
     </div>
 
+    <!-- Request a Google review modal -->
+    <div class="modal-overlay" id="review-modal-overlay">
+        <div class="modal-card">
+            <h3>Request a Review</h3>
+            <p class="modal-error" id="review-error"></p>
+            <p class="resched-current"><strong id="review-who"></strong><br><span id="review-when"></span></p>
+            <p class="resched-current" id="review-note" style="margin-top:0;"></p>
+            <label>Send to this email address</label>
+            <input type="email" id="review-email" placeholder="client@example.com">
+            <div class="modal-actions">
+                <button class="btn btn-outline" id="cancel-review">Cancel</button>
+                <button class="btn" id="send-review">Send Request</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Pick a client for a new consent form -->
     <div class="modal-overlay" id="client-picker-overlay">
         <div class="modal-card">
@@ -2064,7 +2082,7 @@
                         <div class="agenda-time">${formatTime(a.appointment_time)}</div>
                         <div class="agenda-details">
                             <div class="name">${escapeHtml(a.client_name)}</div>
-                            <div class="treatment">${escapeHtml(a.treatment)}${selectedCalendarDate ? '' : ' · ' + formatDate(a.appointment_date)}${a.status === 'cancelled' ? ' · <span class="cancelled-tag">Cancelled</span>' : ''}</div>
+                            <div class="treatment">${escapeHtml(a.treatment)}${selectedCalendarDate ? '' : ' · ' + formatDate(a.appointment_date)}${a.status === 'cancelled' ? ' · <span class="cancelled-tag">Cancelled</span>' : ''}${a.review_requested_at ? ' · <span class="review-tag">Review requested</span>' : ''}</div>
                         </div>
                         ${apptActionsHtml(a)}
                     </div>`).join('')
@@ -2514,7 +2532,10 @@
         // Buttons shown on every appointment row. Cancelled ones can't be moved,
         // but can still be deleted.
         function apptActionsHtml(a) {
+            // A review can only be asked for once the appointment has happened
+            const canAskForReview = a.status !== 'cancelled' && a.appointment_date <= todayISO();
             return `<div class="appt-actions">
+                ${canAskForReview ? `<button class="resched-btn" data-review-appt="${a.id}">${a.review_requested_at ? 'Ask again' : 'Request review'}</button>` : ''}
                 ${a.status === 'cancelled' ? '' : `<button class="resched-btn" data-resched="${a.id}">Reschedule</button>
                 <button class="resched-btn" data-cancel-appt="${a.id}">Cancel</button>`}
                 <button class="icon-btn" data-delete-appt="${a.id}" title="Delete appointment"><i class="fa-solid fa-trash"></i></button>
@@ -2526,6 +2547,12 @@
                 btn.addEventListener('click', e => {
                     e.stopPropagation();
                     openReschedule(btn.dataset.resched);
+                });
+            });
+            container.querySelectorAll('[data-review-appt]').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    openReviewRequest(btn.dataset.reviewAppt);
                 });
             });
             container.querySelectorAll('[data-cancel-appt]').forEach(btn => {
@@ -2628,6 +2655,67 @@
                 }
             } finally {
                 confirmBtn.disabled = false;
+            }
+        });
+
+        // ---------- Ask a client for a Google review (after their appointment) ----------
+        const reviewModal = document.getElementById('review-modal-overlay');
+        let reviewingId = null;
+
+        function openReviewRequest(id) {
+            const a = apptCache.get(id);
+            if (!a) return;
+            reviewingId = id;
+            document.getElementById('review-who').textContent = `${a.client_name} - ${a.treatment}`;
+            document.getElementById('review-when').textContent = `${formatDate(a.appointment_date)} at ${formatTime(a.appointment_time)}`;
+            document.getElementById('review-note').textContent = a.review_requested_at
+                ? `A request was already sent on ${formatDate(a.review_requested_at.slice(0, 10))}. Sending again will email them a second time.`
+                : 'Sends a short thank-you email with a link to leave a Google review. They are free to ignore it.';
+            document.getElementById('review-error').classList.remove('active');
+            // Same lookup as Reschedule and Cancel (saved address, else the client's profile)
+            prefillClientEmail(a, { checked: false }, document.getElementById('review-email'), () => reviewingId === id);
+            reviewModal.classList.add('active');
+        }
+
+        document.getElementById('cancel-review').addEventListener('click', () => {
+            reviewingId = null;
+            reviewModal.classList.remove('active');
+        });
+
+        document.getElementById('send-review').addEventListener('click', async () => {
+            const a = apptCache.get(reviewingId);
+            const errorEl = document.getElementById('review-error');
+            const sendBtn = document.getElementById('send-review');
+            if (!a) return;
+
+            const clientEmail = document.getElementById('review-email').value.trim();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail)) {
+                errorEl.textContent = 'Enter a valid email address for the client.';
+                errorEl.classList.add('active');
+                return;
+            }
+            errorEl.classList.remove('active');
+            sendBtn.disabled = true;
+
+            try {
+                const { error: fnError } = await supabaseClient.functions.invoke('appointment-confirmation', {
+                    body: { type: 'review_request', name: a.client_name, email: clientEmail }
+                });
+                if (fnError) throw fnError;
+
+                // Only mark it as requested once the email has really gone
+                const changes = { review_requested_at: new Date().toISOString() };
+                if (clientEmail !== a.client_email) changes.client_email = clientEmail;
+                await supabaseClient.from('appointments').update(changes).eq('id', a.id);
+
+                reviewModal.classList.remove('active');
+                refreshAfterAppointmentChange();
+            } catch (err) {
+                console.error('review request failed:', err);
+                errorEl.textContent = 'The email could not be sent. Nothing was recorded, so you can try again.';
+                errorEl.classList.add('active');
+            } finally {
+                sendBtn.disabled = false;
             }
         });
 
@@ -3673,7 +3761,7 @@
             const [formsRes, apptsRes, clientRes] = await Promise.all([
                 supabaseClient.from('consent_records').select('id, template_key, created_at')
                     .eq('client_name', name).order('created_at', { ascending: false }),
-                supabaseClient.from('appointments').select('id, client_name, client_email, treatment, appointment_date, appointment_time, status, notes')
+                supabaseClient.from('appointments').select('id, client_name, client_email, treatment, appointment_date, appointment_time, status, notes, review_requested_at')
                     .eq('client_name', name).order('appointment_date', { ascending: false }).limit(10),
                 supabaseClient.from('clients').select('phone, email').eq('name', name).maybeSingle()
             ]);
@@ -3710,7 +3798,7 @@
             apptsEl.innerHTML = appts.length
                 ? appts.map(a => `
                     <div class="list-row appt-row">
-                        <div><strong>${escapeHtml(a.treatment)}</strong><div class="meta">${formatDate(a.appointment_date)} · ${formatTime(a.appointment_time)}</div></div>
+                        <div><strong>${escapeHtml(a.treatment)}</strong><div class="meta">${formatDate(a.appointment_date)} · ${formatTime(a.appointment_time)}${a.review_requested_at ? ' · <span class="review-tag">Review requested</span>' : ''}</div></div>
                         ${apptActionsHtml(a)}
                         <span class="status-pill ${statusPillClass[a.status] || 'status-pending'}">${statusLabel[a.status] || a.status}</span>
                     </div>`).join('')
