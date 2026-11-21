@@ -848,7 +848,8 @@
         .cp-textarea textarea {
             width: 100%;
             min-height: 80px;
-            resize: vertical;
+            resize: none;      /* it grows with the text instead (see autosizeTextareas) */
+            overflow: hidden;
             border: none;
             background: transparent;
             font-family: "Quicksand", sans-serif;
@@ -3101,7 +3102,7 @@
                 <div class="cp-ornament">◆</div>
                 <div class="cp-subtitle">${tpl.subtitle}</div>
                 ${ro && d.edit_history && d.edit_history.length
-                    ? `<div class="cp-hint" style="text-align:center;">Last edited ${formatDate(d.edit_history[d.edit_history.length - 1].edited_at.slice(0, 10))}${d.edit_history.length > 1 ? ` (edited ${d.edit_history.length} times)` : ''}</div>`
+                    ? `<div class="cp-hint" style="text-align:center;">Last edited ${formatDate(d.edit_history[d.edit_history.length - 1].edited_at.slice(0, 10))}</div>`
                     : ''}`;
 
             tpl.sections.forEach(sec => {
@@ -3176,6 +3177,7 @@
 
             consentPaper.innerHTML = html;
             consentPaper.classList.toggle('readonly', ro);
+            autosizeTextareas(); // a saved note that runs long shows in full straight away
             document.getElementById('consent-form-heading').textContent = ro
                 ? `${tpl.shortName} — ${record.client_name}`
                 : editingRecord
@@ -3513,6 +3515,26 @@
                 el.addEventListener('pointercancel', up);
             });
         }
+
+        // Long-text boxes in the forms (Treatment Notes, Patient Goals...) grow as she
+        // types, so nothing is ever hidden behind a scrollbar - on screen, when a saved
+        // form is reopened, and on the printed page.
+        function autosizeTextarea(el) {
+            const cs = getComputedStyle(el);
+            const padding = cs.boxSizing === 'border-box' ? 0 : parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+            el.style.height = 'auto';
+            el.style.height = (el.scrollHeight - padding) + 'px';
+        }
+
+        function autosizeTextareas() {
+            consentPaper.querySelectorAll('.cp-textarea textarea').forEach(autosizeTextarea);
+        }
+
+        consentPaper.addEventListener('input', e => {
+            if (e.target.matches && e.target.matches('.cp-textarea textarea')) autosizeTextarea(e.target);
+        });
+        window.addEventListener('resize', autosizeTextareas); // narrower screen = more lines
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(autosizeTextareas); // once the form font has loaded
 
         function collectConsentData() {
             const data = {};
