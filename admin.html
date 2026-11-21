@@ -1457,6 +1457,7 @@
                             <button class="btn btn-outline" id="consent-aftercare-btn" style="display:none;"><i class="fa-solid fa-envelope-open-text"></i> Send aftercare</button>
                             <button class="btn btn-outline" id="consent-print-btn"><i class="fa-solid fa-print"></i> Print / PDF</button>
                         </div>
+                        <p class="cp-hint" id="aftercare-pending-note" style="display:none; margin-top:0.6rem;"></p>
                         <p class="modal-error" id="consent-form-error" style="margin-top:0.8rem;"></p>
                     </div>
                 </section>
@@ -3114,7 +3115,8 @@
             // Only the Treatment Record can be edited after saving. The forms the client signs
             // (consent, medical history) stay exactly as she signed them.
             document.getElementById('consent-edit-btn').style.display = (ro && key === 'treatment') ? 'inline-flex' : 'none';
-            document.getElementById('consent-aftercare-btn').style.display = (ro && key === 'treatment') ? 'inline-flex' : 'none';
+            document.getElementById('consent-aftercare-btn').style.display = (key === 'treatment') ? 'inline-flex' : 'none'; // new, being edited, or saved
+            document.getElementById('aftercare-pending-note').style.display = 'none';
             document.getElementById('consent-cancel-edit-btn').style.display = (!ro && editingRecord) ? 'inline-flex' : 'none';
             consentFormError.classList.remove('active');
 
@@ -3513,6 +3515,7 @@
         }
 
         function openConsentForm(key, prefill, returnTo) {
+            pendingAftercare = [];
             editingRecord = null;
             viewedRecord = null;
             consentReturnTo = returnTo || null;
@@ -3528,6 +3531,7 @@
             consentReturnTo = returnTo || null;
             viewedRecord = data;
             editingRecord = null;
+            pendingAftercare = [];
             switchView('consent');
             consentFormPanel.style.display = 'block';
             renderConsentForm(data.template_key, data);
@@ -3557,6 +3561,11 @@
             if (editingRecord) {
                 const { edit_history: earlier = [], ...previous } = editingRecord.data || {};
                 data.edit_history = [...earlier, { edited_at: new Date().toISOString(), previous }];
+                // The form itself has no field for this, so carry it over - otherwise editing a
+                // record would wipe the note of aftercare already sent - and add anything sent
+                // from the form during this edit.
+                const sentBefore = (editingRecord.data && editingRecord.data.aftercare_sent) || [];
+                if (sentBefore.length || pendingAftercare.length) data.aftercare_sent = [...sentBefore, ...pendingAftercare];
 
                 const { error: updateError } = await supabaseClient.from('consent_records')
                     .update({ client_name: data.patient_name, data })
@@ -3583,11 +3592,15 @@
                 return;
             }
 
-            const { error } = await supabaseClient.from('consent_records').insert({
+            // Aftercare already emailed from this form before saving goes in with it
+            const sentBeforeSaving = pendingAftercare.length > 0;
+            if (sentBeforeSaving) data.aftercare_sent = [...pendingAftercare];
+
+            const { data: savedRow, error } = await supabaseClient.from('consent_records').insert({
                 template_key: currentTemplateKey,
                 client_name: data.patient_name,
                 data
-            });
+            }).select().single();
             // Register the client profile if this is a new name
             await supabaseClient.from('clients').upsert(
                 { name: data.patient_name },
@@ -3601,9 +3614,29 @@
                 return;
             }
 
-            consentGoBack();
+            pendingAftercare = []; // saved with the record now (cleared only once the save has worked)
             loadDashboard();
             loadClients();
+
+            // A new Treatment Record has just been saved: offer the aftercare leaflet straight away,
+            // unless it has already been sent from the form. Either way she then goes back to the
+            // client's profile.
+            if (currentTemplateKey === 'treatment' && savedRow && !sentBeforeSaving) {
+                openAftercareDialog({
+                    name: data.patient_name,
+                    record: savedRow,
+                    intro: 'Treatment record saved. Would you like to email the aftercare leaflet to the client now?',
+                    cancelLabel: 'Not now',
+                    onSent: async (entry) => {
+                        const logError = await logAftercareOnRecord(savedRow, entry);
+                        if (logError) alert('The aftercare email was sent, but it could not be noted on the form: ' + logError.message);
+                        consentGoBack();
+                    },
+                    onCancel: () => consentGoBack()
+                });
+                return;
+            }
+            consentGoBack();
         });
 
         // ---- Editing a saved Treatment Record ----
@@ -3630,6 +3663,7 @@
             if (!viewedRecord || viewedRecord.template_key !== 'treatment') return;
             const record = viewedRecord;
             editingRecord = record;
+            pendingAftercare = [];
             renderConsentForm(record.template_key, null, record.data);
 
             consentSaveBtn.disabled = true;
@@ -3640,12 +3674,20 @@
             window.scrollTo(0, 0);
         });
 
-        // ---- Sending the aftercare leaflet(s) from a saved Treatment Record ----
+        // ---- Sending the aftercare leaflet(s) from a Treatment Record ----
         // The PDFs are kept in a private storage bucket and attached by the email function;
         // they are never published on the website. A note of what was sent, to whom and
         // when is kept on the record, since giving aftercare advice is part of the care.
+        //
+        // The same dialog serves three moments:
+        //   - a SAVED record (button on its read-only view)
+        //   - a form not saved yet (the button works there too; the note is kept and saved
+        //     together with the form)
+        //   - straight after a new Treatment Record is saved (it pops up by itself)
         const AFTERCARE_LABELS = { filler: 'Dermal Filler', anti_wrinkle: 'Anti-Wrinkle' };
         const aftercareModal = document.getElementById('aftercare-modal-overlay');
+        let aftercareCtx = null;      // what the open dialog is for (see openAftercareDialog)
+        let pendingAftercare = [];    // sends made from a form that has not been saved yet
 
         // Best guess at the client's address: their profile, else the latest appointment
         // that has one, else an email written on one of their consent / medical forms.
@@ -3665,37 +3707,93 @@
             return hit ? hit.email.trim() : '';
         }
 
-        document.getElementById('consent-aftercare-btn').addEventListener('click', async () => {
-            if (!viewedRecord || viewedRecord.template_key !== 'treatment') return;
-            const record = viewedRecord;
-            document.getElementById('aftercare-who').textContent = record.client_name;
+        // ctx: { name, record (the saved row, or null), intro (optional line), cancelLabel,
+        //        onSent(entry) - runs after a successful send, onCancel() - runs on cancel }
+        async function openAftercareDialog(ctx) {
+            aftercareCtx = ctx;
+            document.getElementById('aftercare-who').textContent = ctx.name;
             document.getElementById('aftercare-error').classList.remove('active');
             document.getElementById('aftercare-filler').checked = false;
             document.getElementById('aftercare-wrinkle').checked = false;
+            document.getElementById('cancel-aftercare').textContent = ctx.cancelLabel || 'Cancel';
 
-            const sent = (record.data && record.data.aftercare_sent) || [];
-            const last = sent[sent.length - 1];
-            document.getElementById('aftercare-note').textContent = last
-                ? `Aftercare was already sent on ${formatDate(last.sent_at.slice(0, 10))} (${(last.leaflets || []).map(k => AFTERCARE_LABELS[k] || k).join(' and ')}). Sending again emails them a second time.`
-                : 'Emails the leaflet to the client as a PDF attachment.';
+            const earlier = [
+                ...((ctx.record && ctx.record.data && ctx.record.data.aftercare_sent) || []),
+                ...pendingAftercare
+            ];
+            const last = earlier[earlier.length - 1];
+            document.getElementById('aftercare-note').textContent = ctx.intro
+                || (last
+                    ? `Aftercare was already sent on ${formatDate(last.sent_at.slice(0, 10))} (${(last.leaflets || []).map(k => AFTERCARE_LABELS[k] || k).join(' and ')}). Sending again emails them a second time.`
+                    : 'Emails the leaflet to the client as a PDF attachment.');
 
             const emailField = document.getElementById('aftercare-email');
             emailField.value = '';
             aftercareModal.classList.add('active');
-            const found = await lookupClientEmail(record.client_name);
+            const found = await lookupClientEmail(ctx.name);
             // The dialog may have been closed, or she may have started typing, while this ran
-            if (aftercareModal.classList.contains('active') && !emailField.value.trim()) emailField.value = found;
+            if (aftercareModal.classList.contains('active') && aftercareCtx === ctx && !emailField.value.trim()) emailField.value = found;
+        }
+
+        // Writes one "aftercare sent" entry onto a saved record
+        async function logAftercareOnRecord(record, entry) {
+            const newData = { ...(record.data || {}), aftercare_sent: [...((record.data && record.data.aftercare_sent) || []), entry] };
+            const { error } = await supabaseClient.from('consent_records').update({ data: newData }).eq('id', record.id);
+            if (!error) record.data = newData;
+            return error;
+        }
+
+        // The button on the form: saved record -> logs on it and reloads it; unsaved form -> remembers it
+        document.getElementById('consent-aftercare-btn').addEventListener('click', () => {
+            // Not while editing: then the form on screen has unsaved changes, so it must be
+            // treated like a new form (reloading the saved copy would throw them away)
+            if (!editingRecord && viewedRecord && viewedRecord.template_key === 'treatment') {
+                const record = viewedRecord;
+                openAftercareDialog({
+                    name: record.client_name,
+                    record,
+                    onSent: async (entry) => {
+                        const logError = await logAftercareOnRecord(record, entry);
+                        if (logError) alert('The aftercare email was sent, but it could not be noted on the form: ' + logError.message);
+                        await viewConsentRecord(record.id, consentReturnTo); // reload, so "Aftercare sent" shows
+                    }
+                });
+                return;
+            }
+
+            // A form being filled in or edited: use the name typed on it
+            const nameField = consentPaper.querySelector('[data-ck="patient_name"]');
+            const name = nameField ? nameField.value.trim() : '';
+            if (!name) {
+                consentFormError.textContent = 'Enter the patient name first, so the leaflet goes to the right person.';
+                consentFormError.classList.add('active');
+                return;
+            }
+            consentFormError.classList.remove('active');
+            openAftercareDialog({
+                name,
+                record: editingRecord,
+                onSent: (entry) => {
+                    pendingAftercare.push(entry);
+                    const note = document.getElementById('aftercare-pending-note');
+                    note.textContent = 'Aftercare emailed to ' + entry.to + ' - it will be noted on the form when you save.';
+                    note.style.display = 'block';
+                }
+            });
         });
 
         document.getElementById('cancel-aftercare').addEventListener('click', () => {
+            const ctx = aftercareCtx;
             aftercareModal.classList.remove('active');
+            aftercareCtx = null;
+            if (ctx && ctx.onCancel) ctx.onCancel();
         });
 
         document.getElementById('send-aftercare').addEventListener('click', async () => {
-            const record = viewedRecord;
+            const ctx = aftercareCtx;
             const errorEl = document.getElementById('aftercare-error');
             const sendBtn = document.getElementById('send-aftercare');
-            if (!record) return;
+            if (!ctx) return;
 
             const leaflets = [];
             if (document.getElementById('aftercare-filler').checked) leaflets.push('filler');
@@ -3716,8 +3814,8 @@
             sendBtn.disabled = true;
 
             try {
-                const { data: result, error: fnError } = await supabaseClient.functions.invoke('appointment-confirmation', {
-                    body: { type: 'aftercare', name: record.client_name, email: clientEmail, leaflets }
+                const { error: fnError } = await supabaseClient.functions.invoke('appointment-confirmation', {
+                    body: { type: 'aftercare', name: ctx.name, email: clientEmail, leaflets }
                 });
                 if (fnError) {
                     // Show the function's own message (e.g. "leaflet has not been uploaded yet") when it gave one
@@ -3731,17 +3829,10 @@
                     return;
                 }
 
-                // It has gone: note it on the record
-                const entry = { sent_at: new Date().toISOString(), to: clientEmail, leaflets };
-                const newData = { ...(record.data || {}), aftercare_sent: [...((record.data && record.data.aftercare_sent) || []), entry] };
-                const { error: logError } = await supabaseClient.from('consent_records').update({ data: newData }).eq('id', record.id);
-
+                // It has gone
                 aftercareModal.classList.remove('active');
-                if (logError) {
-                    alert('The aftercare email was sent, but it could not be noted on the form: ' + logError.message);
-                    return;
-                }
-                await viewConsentRecord(record.id, consentReturnTo); // reload, so "Aftercare sent" shows
+                aftercareCtx = null;
+                if (ctx.onSent) await ctx.onSent({ sent_at: new Date().toISOString(), to: clientEmail, leaflets });
             } catch (err) {
                 console.error('aftercare email failed:', err);
                 errorEl.textContent = 'The email could not be sent. Nothing was recorded, so you can try again.';
