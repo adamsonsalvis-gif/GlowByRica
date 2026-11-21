@@ -264,7 +264,7 @@ Deno.serve(async (req) => {
       <p style="margin:0 0 1rem 0;">We've received your enquiry and will be in touch within 24 hours.</p>
       <p style="margin:0 0 1rem 0;">Glow by Rica is a nurse-led aesthetics clinic based at Phenix Salon Suites in Derby City Centre.</p>
       <p style="margin:0 0 1.6rem 0;">Our approach is consultation-led, with treatments tailored to you and focused on natural-looking results.</p>
-      <p style="margin:0;">Warmly,<br><strong style="color:#C9A463;">Rica</strong><br>Registered Nurse | Glow by Rica</p>
+      <p style="margin:0;">Warmly,<br><strong style="color:#C9A463;">Rica</strong><br>Glow by Rica</p>
   `, true);
 
   const [notifyRes, replyRes] = await Promise.all([

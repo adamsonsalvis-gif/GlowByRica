@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
             </p>
             <p style="margin:0 0 1rem 0;">There's no obligation. If there's anything you'd like to talk through instead, just reply to this email and I'll get back to you personally.</p>
             <p style="margin:0 0 1.4rem 0; font-size:0.78rem; color:rgba(58,13,13,0.6);">If you'd rather not receive messages like this from us, just reply with "no thanks" and we won't send another.</p>
-            <p style="margin:0;">Warmly,<br><strong style="color:#C9A463;">Rica</strong><br>Registered Nurse<br>Glow by Rica</p>
+            <p style="margin:0;">Warmly,<br><strong style="color:#C9A463;">Rica</strong><br>Glow by Rica</p>
           </td></tr>
           <tr><td style="padding:0 40px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -256,7 +256,7 @@ Deno.serve(async (req) => {
             ${expectBlock}
             ${clinicBlock}
             <p style="margin:0 0 1.4rem 0;">${closingLine}</p>
-            <p style="margin:0;">Warmly,<br><strong style="color:#C9A463;">Rica</strong><br>Registered Nurse<br>Glow by Rica</p>
+            <p style="margin:0;">Warmly,<br><strong style="color:#C9A463;">Rica</strong><br>Glow by Rica</p>
           </td></tr>
           <tr><td style="padding:0 40px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>

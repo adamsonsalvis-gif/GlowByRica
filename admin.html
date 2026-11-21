@@ -566,6 +566,12 @@
             border-bottom: 1px solid rgba(58,13,13,0.1);
         }
 
+        /* Clickable column headers that sort the Clients list */
+        th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+        th.sortable:hover { color: #3A0D0D; }
+        th.sortable .sort-arrow { font-size: 0.7rem; margin-left: 0.25rem; opacity: 0.35; }
+        th.sortable.sorted .sort-arrow { opacity: 1; color: #C9A463; }
+
         td {
             padding: 0.8rem 0.4rem;
             font-size: 0.85rem;
@@ -1509,7 +1515,12 @@
                             <h3>Client Profiles</h3>
                             <table>
                                 <thead>
-                                    <tr><th>Name</th><th>Forms</th><th>Last Activity</th><th></th></tr>
+                                    <tr>
+                                        <th class="sortable" data-sort="name" role="button" tabindex="0" title="Sort by name">Name <span class="sort-arrow"></span></th>
+                                        <th>Forms</th>
+                                        <th class="sortable" data-sort="activity" role="button" tabindex="0" title="Sort by last activity">Last Activity <span class="sort-arrow"></span></th>
+                                        <th></th>
+                                    </tr>
                                 </thead>
                                 <tbody id="clients-tbody">
                                     <tr><td colspan="4" class="empty-state">Loading…</td></tr>
@@ -3735,21 +3746,73 @@
                 if (r.created_at > m.last) m.last = r.created_at;
             });
 
+            clientListRows = Array.from(clients.entries()).map(([name, c]) => ({ name, count: c.count, last: c.last }));
+            renderClientsTable();
+        }
+
+        // ---------- Sorting the Clients list ----------
+        // Click "Name" or "Last Activity" to sort by it; click again to flip the
+        // direction. The choice is remembered on this device, so the list comes
+        // back the way she left it.
+        let clientListRows = []; // [{ name, count, last }]
+        let clientSort = { key: 'activity', dir: 'desc' }; // newest activity first until she chooses
+
+        try {
+            const saved = JSON.parse(localStorage.getItem('clientSort') || 'null');
+            if (saved && ['name', 'activity'].includes(saved.key) && ['asc', 'desc'].includes(saved.dir)) clientSort = saved;
+        } catch (_) { /* private mode etc. - just use the default */ }
+
+        function renderClientsTable() {
+            const dirMul = clientSort.dir === 'asc' ? 1 : -1;
+            const byName = (a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base', numeric: true });
+            const rows = clientListRows.slice().sort((a, b) => {
+                if (clientSort.key === 'name') return dirMul * byName(a, b) || (b.last > a.last ? 1 : -1);
+                // Activity: compare the timestamps; names settle ties so the order never jumps about
+                const cmp = a.last === b.last ? 0 : (a.last > b.last ? 1 : -1);
+                return dirMul * cmp || byName(a, b);
+            });
+
             const tbody = document.getElementById('clients-tbody');
-            tbody.innerHTML = clients.size
-                ? Array.from(clients.entries()).map(([name, c]) => `
+            tbody.innerHTML = rows.length
+                ? rows.map(c => `
                     <tr>
-                        <td>${escapeHtml(name)}</td>
+                        <td>${escapeHtml(c.name)}</td>
                         <td>${c.count}</td>
                         <td>${formatDate(c.last.slice(0, 10))}</td>
-                        <td><button class="icon-btn" data-client="${escapeAttr(name)}" title="Open profile"><i class="fa-solid fa-folder-open"></i></button></td>
+                        <td><button class="icon-btn" data-client="${escapeAttr(c.name)}" title="Open profile"><i class="fa-solid fa-folder-open"></i></button></td>
                     </tr>`).join('')
                 : '<tr><td colspan="4" class="empty-state">No clients yet — profiles appear when a form is saved.</td></tr>';
 
             tbody.querySelectorAll('[data-client]').forEach(btn => {
                 btn.addEventListener('click', () => openClientProfile(btn.dataset.client, null));
             });
+
+            // Arrows on the headers: the active one shows the direction, the other stays quiet
+            document.querySelectorAll('#clients-list-panel th.sortable').forEach(th => {
+                const active = th.dataset.sort === clientSort.key;
+                th.classList.toggle('sorted', active);
+                th.setAttribute('aria-sort', active ? (clientSort.dir === 'asc' ? 'ascending' : 'descending') : 'none');
+                th.querySelector('.sort-arrow').textContent = active ? (clientSort.dir === 'asc' ? '▲' : '▼') : '↕';
+            });
         }
+
+        function sortClientsBy(key) {
+            if (clientSort.key === key) {
+                clientSort.dir = clientSort.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                // First click on a column: A to Z for names, newest first for dates
+                clientSort = { key, dir: key === 'name' ? 'asc' : 'desc' };
+            }
+            try { localStorage.setItem('clientSort', JSON.stringify(clientSort)); } catch (_) {}
+            renderClientsTable();
+        }
+
+        document.querySelectorAll('#clients-list-panel th.sortable').forEach(th => {
+            th.addEventListener('click', () => sortClientsBy(th.dataset.sort));
+            th.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sortClientsBy(th.dataset.sort); }
+            });
+        });
 
         async function openClientProfile(name, returnView) {
             if (returnView !== undefined) profileReturnView = returnView;
