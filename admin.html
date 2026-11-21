@@ -1454,6 +1454,7 @@
                             <button class="btn" id="consent-save-btn"><i class="fa-solid fa-floppy-disk"></i> Save Form</button>
                             <button class="btn" id="consent-edit-btn" style="display:none;"><i class="fa-solid fa-pen"></i> Edit</button>
                             <button class="btn btn-outline" id="consent-cancel-edit-btn" style="display:none;">Cancel editing</button>
+                            <button class="btn btn-outline" id="consent-aftercare-btn" style="display:none;"><i class="fa-solid fa-envelope-open-text"></i> Send aftercare</button>
                             <button class="btn btn-outline" id="consent-print-btn"><i class="fa-solid fa-print"></i> Print / PDF</button>
                         </div>
                         <p class="modal-error" id="consent-form-error" style="margin-top:0.8rem;"></p>
@@ -1654,6 +1655,29 @@
             <div class="modal-actions">
                 <button class="btn btn-outline" id="cancel-review">Cancel</button>
                 <button class="btn" id="send-review">Send Request</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Send aftercare leaflet(s) from a saved Treatment Record -->
+    <div class="modal-overlay" id="aftercare-modal-overlay">
+        <div class="modal-card">
+            <h3>Send Aftercare</h3>
+            <p class="modal-error" id="aftercare-error"></p>
+            <p class="resched-current"><strong id="aftercare-who"></strong></p>
+            <p class="resched-current" id="aftercare-note" style="margin-top:0;"></p>
+            <label>Which leaflet?</label>
+            <label style="display:flex; align-items:center; gap:0.5rem; text-transform:none; letter-spacing:0; margin:0.2rem 0 0.4rem;">
+                <input type="checkbox" id="aftercare-filler" style="width:auto; margin:0;"> Dermal filler aftercare
+            </label>
+            <label style="display:flex; align-items:center; gap:0.5rem; text-transform:none; letter-spacing:0; margin:0 0 1rem;">
+                <input type="checkbox" id="aftercare-wrinkle" style="width:auto; margin:0;"> Anti-wrinkle aftercare
+            </label>
+            <label>Send to this email address</label>
+            <input type="email" id="aftercare-email" placeholder="client@example.com">
+            <div class="modal-actions">
+                <button class="btn btn-outline" id="cancel-aftercare">Cancel</button>
+                <button class="btn" id="send-aftercare">Send Leaflet</button>
             </div>
         </div>
     </div>
@@ -2996,6 +3020,13 @@
                 <div class="cp-subtitle">${tpl.subtitle}</div>
                 ${ro && d.edit_history && d.edit_history.length
                     ? `<div class="cp-hint" style="text-align:center;">Last edited ${formatDate(d.edit_history[d.edit_history.length - 1].edited_at.slice(0, 10))}</div>`
+                    : ''}
+                ${ro && d.aftercare_sent && d.aftercare_sent.length
+                    ? (() => {
+                        const last = d.aftercare_sent[d.aftercare_sent.length - 1];
+                        const names = (last.leaflets || []).map(k => AFTERCARE_LABELS[k] || k).join(' and ');
+                        return `<div class="cp-hint" style="text-align:center;">Aftercare sent ${formatDate(last.sent_at.slice(0, 10))}${names ? ' (' + escapeHtml(names) + ')' : ''}</div>`;
+                    })()
                     : ''}`;
 
             tpl.sections.forEach(sec => {
@@ -3083,6 +3114,7 @@
             // Only the Treatment Record can be edited after saving. The forms the client signs
             // (consent, medical history) stay exactly as she signed them.
             document.getElementById('consent-edit-btn').style.display = (ro && key === 'treatment') ? 'inline-flex' : 'none';
+            document.getElementById('consent-aftercare-btn').style.display = (ro && key === 'treatment') ? 'inline-flex' : 'none';
             document.getElementById('consent-cancel-edit-btn').style.display = (!ro && editingRecord) ? 'inline-flex' : 'none';
             consentFormError.classList.remove('active');
 
@@ -3606,6 +3638,117 @@
                 .map(([key, pad]) => loadImageIntoPad(pad, record.data[key])));
             consentSaveBtn.disabled = false;
             window.scrollTo(0, 0);
+        });
+
+        // ---- Sending the aftercare leaflet(s) from a saved Treatment Record ----
+        // The PDFs are kept in a private storage bucket and attached by the email function;
+        // they are never published on the website. A note of what was sent, to whom and
+        // when is kept on the record, since giving aftercare advice is part of the care.
+        const AFTERCARE_LABELS = { filler: 'Dermal Filler', anti_wrinkle: 'Anti-Wrinkle' };
+        const aftercareModal = document.getElementById('aftercare-modal-overlay');
+
+        // Best guess at the client's address: their profile, else the latest appointment
+        // that has one, else an email written on one of their consent / medical forms.
+        async function lookupClientEmail(name) {
+            const like = escapeLike(name);
+            const { data: profile } = await supabaseClient.from('clients').select('email').ilike('name', like).limit(1);
+            if (profile && profile[0] && profile[0].email && profile[0].email.trim()) return profile[0].email.trim();
+
+            const { data: appts } = await supabaseClient.from('appointments').select('client_email')
+                .ilike('client_name', like).not('client_email', 'is', null)
+                .order('created_at', { ascending: false }).limit(1);
+            if (appts && appts[0] && appts[0].client_email) return appts[0].client_email.trim();
+
+            const { data: forms } = await supabaseClient.from('consent_records').select('email:data->>email')
+                .ilike('client_name', like).order('created_at', { ascending: false }).limit(10);
+            const hit = (forms || []).find(r => r.email && r.email.trim());
+            return hit ? hit.email.trim() : '';
+        }
+
+        document.getElementById('consent-aftercare-btn').addEventListener('click', async () => {
+            if (!viewedRecord || viewedRecord.template_key !== 'treatment') return;
+            const record = viewedRecord;
+            document.getElementById('aftercare-who').textContent = record.client_name;
+            document.getElementById('aftercare-error').classList.remove('active');
+            document.getElementById('aftercare-filler').checked = false;
+            document.getElementById('aftercare-wrinkle').checked = false;
+
+            const sent = (record.data && record.data.aftercare_sent) || [];
+            const last = sent[sent.length - 1];
+            document.getElementById('aftercare-note').textContent = last
+                ? `Aftercare was already sent on ${formatDate(last.sent_at.slice(0, 10))} (${(last.leaflets || []).map(k => AFTERCARE_LABELS[k] || k).join(' and ')}). Sending again emails them a second time.`
+                : 'Emails the leaflet to the client as a PDF attachment.';
+
+            const emailField = document.getElementById('aftercare-email');
+            emailField.value = '';
+            aftercareModal.classList.add('active');
+            const found = await lookupClientEmail(record.client_name);
+            // The dialog may have been closed, or she may have started typing, while this ran
+            if (aftercareModal.classList.contains('active') && !emailField.value.trim()) emailField.value = found;
+        });
+
+        document.getElementById('cancel-aftercare').addEventListener('click', () => {
+            aftercareModal.classList.remove('active');
+        });
+
+        document.getElementById('send-aftercare').addEventListener('click', async () => {
+            const record = viewedRecord;
+            const errorEl = document.getElementById('aftercare-error');
+            const sendBtn = document.getElementById('send-aftercare');
+            if (!record) return;
+
+            const leaflets = [];
+            if (document.getElementById('aftercare-filler').checked) leaflets.push('filler');
+            if (document.getElementById('aftercare-wrinkle').checked) leaflets.push('anti_wrinkle');
+            const clientEmail = document.getElementById('aftercare-email').value.trim();
+
+            if (!leaflets.length) {
+                errorEl.textContent = 'Tick the leaflet you want to send.';
+                errorEl.classList.add('active');
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail)) {
+                errorEl.textContent = 'Enter a valid email address for the client.';
+                errorEl.classList.add('active');
+                return;
+            }
+            errorEl.classList.remove('active');
+            sendBtn.disabled = true;
+
+            try {
+                const { data: result, error: fnError } = await supabaseClient.functions.invoke('appointment-confirmation', {
+                    body: { type: 'aftercare', name: record.client_name, email: clientEmail, leaflets }
+                });
+                if (fnError) {
+                    // Show the function's own message (e.g. "leaflet has not been uploaded yet") when it gave one
+                    let msg = 'The email could not be sent. Nothing was recorded, so you can try again.';
+                    try {
+                        const body = await fnError.context.json();
+                        if (body && body.error) msg = body.error + '.';
+                    } catch (_) { /* keep the generic message */ }
+                    errorEl.textContent = msg;
+                    errorEl.classList.add('active');
+                    return;
+                }
+
+                // It has gone: note it on the record
+                const entry = { sent_at: new Date().toISOString(), to: clientEmail, leaflets };
+                const newData = { ...(record.data || {}), aftercare_sent: [...((record.data && record.data.aftercare_sent) || []), entry] };
+                const { error: logError } = await supabaseClient.from('consent_records').update({ data: newData }).eq('id', record.id);
+
+                aftercareModal.classList.remove('active');
+                if (logError) {
+                    alert('The aftercare email was sent, but it could not be noted on the form: ' + logError.message);
+                    return;
+                }
+                await viewConsentRecord(record.id, consentReturnTo); // reload, so "Aftercare sent" shows
+            } catch (err) {
+                console.error('aftercare email failed:', err);
+                errorEl.textContent = 'The email could not be sent. Nothing was recorded, so you can try again.';
+                errorEl.classList.add('active');
+            } finally {
+                sendBtn.disabled = false;
+            }
         });
 
         document.getElementById('consent-cancel-edit-btn').addEventListener('click', () => {

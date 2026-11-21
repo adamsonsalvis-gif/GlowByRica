@@ -3,7 +3,8 @@
 // Called from admin.html when Rica books an appointment with a client email
 // on file, or reschedules one (body.type = "reschedule", with the previous
 // date/time), cancels one (body.type = "cancellation") or asks for a Google review
-// (body.type = "review_request"). Sends the client a
+// (body.type = "review_request"), or emails aftercare leaflet PDFs (body.type = "aftercare").
+// Sends the client a
 // branded email with the date, time and
 // treatment. Unlike contact-form, this one is NOT public — it stays behind
 // normal JWT verification, AND the function itself checks the caller is a
@@ -46,7 +47,10 @@ const isValidEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 // sending mail - never exposed to the browser, only lives in this function.
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-function sendEmail(to: string, subject: string, html: string, replyTo?: string) {
+function sendEmail(
+  to: string, subject: string, html: string, replyTo?: string,
+  attachments?: { filename: string; content: string }[],
+) {
   return fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -59,6 +63,7 @@ function sendEmail(to: string, subject: string, html: string, replyTo?: string) 
       subject,
       html,
       ...(replyTo ? { reply_to: replyTo } : {}),
+      ...(attachments && attachments.length ? { attachments } : {}),
     }),
   });
 }
@@ -107,6 +112,7 @@ Deno.serve(async (req) => {
     type?: string; name?: string; email?: string; treatment?: string;
     appointment_date?: string; appointment_time?: string;
     previous_date?: string; previous_time?: string;
+    leaflets?: string[];
   };
   try {
     body = await req.json();
@@ -123,8 +129,9 @@ Deno.serve(async (req) => {
   // A review request is about the person, not a particular slot, so it needs
   // only a name and an email; every other email type needs the appointment.
   const isReview = body.type === "review_request";
+  const isAftercare = body.type === "aftercare";
 
-  if (!name || !email || (!isReview && (!treatment || !appointment_date || !appointment_time))) {
+  if (!name || !email || (!isReview && !isAftercare && (!treatment || !appointment_date || !appointment_time))) {
     return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400, headers });
   }
   if (!isValidEmail(email)) {
@@ -132,6 +139,81 @@ Deno.serve(async (req) => {
   }
 
   const firstName = name.split(/\s+/)[0] || name;
+
+  // ---- Aftercare: emails the chosen leaflet PDF(s) after a treatment ----
+  // The leaflets live in a PRIVATE storage bucket ("aftercare", see supabase/aftercare.sql)
+  // and are attached here, so they are never published at a web address. This is
+  // care information rather than marketing, so it needs no opt-out line.
+  if (isAftercare) {
+    const LEAFLETS: Record<string, { file: string; label: string }> = {
+      filler: { file: "dermal-filler-aftercare.pdf", label: "Dermal Filler Aftercare" },
+      anti_wrinkle: { file: "anti-wrinkle-aftercare.pdf", label: "Anti-Wrinkle Aftercare" },
+    };
+    const wanted = Array.from(new Set(Array.isArray(body.leaflets) ? body.leaflets : []));
+    if (!wanted.length || wanted.some((k) => !LEAFLETS[k])) {
+      return new Response(JSON.stringify({ error: "Choose at least one leaflet" }), { status: 400, headers });
+    }
+
+    const attachments: { filename: string; content: string }[] = [];
+    for (const key of wanted) {
+      const { data: blob, error: dlError } = await supabase.storage.from("aftercare").download(LEAFLETS[key].file);
+      if (dlError || !blob) {
+        console.error("appointment-confirmation: leaflet missing", LEAFLETS[key].file, dlError);
+        return new Response(JSON.stringify({ error: `The ${LEAFLETS[key].label} leaflet has not been uploaded yet` }), { status: 404, headers });
+      }
+      // base64 in chunks: spreading a whole PDF into String.fromCharCode would overflow the stack
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      let binary = "";
+      for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      attachments.push({ filename: `${LEAFLETS[key].label}.pdf`, content: btoa(binary) });
+    }
+
+    const labels = wanted.map((k) => LEAFLETS[k].label);
+    const plural = labels.length > 1;
+    const aftercareHtml = `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAF3EB; padding:32px 16px;">
+      <tr><td align="center">
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px; width:100%; background-color:#FFFFFF; border-radius:14px; overflow:hidden; font-family: Georgia, 'Times New Roman', serif;">
+          <tr><td style="height:6px; background-color:#C9A463; line-height:6px; font-size:0;">&nbsp;</td></tr>
+          <tr><td style="padding:36px 40px 8px 40px; text-align:center;">
+            <span style="color:#C9A463; font-size:1.1rem; letter-spacing:0.3em;">✦</span>
+          </td></tr>
+          <tr><td style="padding:0 40px 32px 40px; color:#3A0D0D; font-size:0.95rem; line-height:1.7;">
+            <p style="margin:0 0 1rem 0;">Hi ${escapeHtml(firstName)},</p>
+            <p style="margin:0 0 1rem 0;">Thank you for visiting Glow by Rica ✨</p>
+            <p style="margin:0 0 1rem 0;">I've attached your aftercare ${plural ? "leaflets" : "leaflet"}. ${plural ? "They explain" : "It explains"} what to expect over the coming days and how to look after yourself, so please keep ${plural ? "them" : "it"} handy and follow the advice.</p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAF3EB; border-radius:8px; margin:0 0 1.4rem 0;">
+              <tr><td style="padding:16px 20px;">
+                <p style="margin:0 0 0.5rem 0; color:#C9A463; font-family: Arial, sans-serif; font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;">Attached</p>
+                ${labels.map((l) => `<p style="margin:0 0 0.2rem 0;">${escapeHtml(l)} (PDF)</p>`).join("")}
+              </td></tr>
+            </table>
+            <p style="margin:0 0 1rem 0;">If you have any questions or you're worried about anything, please get in touch. You can reply to this email or call or WhatsApp <a href="tel:+447398941857" style="color:#C9A463; text-decoration:none;">+44 7398 941857</a>. If you feel unwell or need urgent help, please seek medical advice straight away.</p>
+            <p style="margin:0 0 1.4rem 0;">Thank you for trusting me with your care.</p>
+            <p style="margin:0;">Warmly,<br><strong style="color:#C9A463;">Rica</strong><br>Glow by Rica</p>
+          </td></tr>
+          <tr><td style="padding:0 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+              <td style="border-top:1px solid rgba(201,164,99,0.35); line-height:1px; font-size:0;">&nbsp;</td>
+            </tr></table>
+          </td></tr>
+          <tr><td style="padding:24px 40px 36px 40px; text-align:center;">
+            <img src="https://glowbyrica.com/images/GLOW.png" alt="Glow By Rica logo" width="110" style="width:110px; max-width:110px; height:auto; display:inline-block;">
+            <p style="margin:14px 0 0 0; font-family: Arial, sans-serif; font-size:0.7rem; letter-spacing:0.05em; color:rgba(58,13,13,0.55);">
+              Phenix Salon Suites, Derby City Centre &nbsp;·&nbsp; <a href="https://glowbyrica.com" style="color:#C9A463; text-decoration:none;">glowbyrica.com</a>
+            </p>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>`;
+
+    const aftercareRes = await sendEmail(email, "Your aftercare advice - Glow by Rica", aftercareHtml, "rica@glowbyrica.com", attachments);
+    if (!aftercareRes.ok) {
+      console.error("appointment-confirmation: aftercare email failed", await aftercareRes.text());
+      return new Response(JSON.stringify({ error: "Could not send email" }), { status: 502, headers });
+    }
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
+  }
 
   // ---- Review request: a short thank-you with a link to leave a Google review ----
   // Sent to everyone Rica chooses (not only happy clients), mentions no treatment,
