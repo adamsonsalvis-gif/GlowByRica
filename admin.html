@@ -1498,6 +1498,8 @@
                         <div class="consent-paper" id="consent-paper"></div>
                         <div class="consent-actions" id="consent-form-actions">
                             <button class="btn" id="consent-save-btn"><i class="fa-solid fa-floppy-disk"></i> Save Form</button>
+                            <button class="btn" id="consent-edit-btn" style="display:none;"><i class="fa-solid fa-pen"></i> Edit</button>
+                            <button class="btn btn-outline" id="consent-cancel-edit-btn" style="display:none;">Cancel editing</button>
                             <button class="btn btn-outline" id="consent-print-btn"><i class="fa-solid fa-print"></i> Print / PDF</button>
                         </div>
                         <p class="modal-error" id="consent-form-error" style="margin-top:0.8rem;"></p>
@@ -3097,7 +3099,10 @@
                 <h3 class="cp-heading">${escapeHtml(tpl.formHeading || 'Consent Form')}</h3>
                 ${tpl.treatmentName ? `<div class="cp-treatment">${escapeHtml(tpl.treatmentName)}</div>` : ''}
                 <div class="cp-ornament">◆</div>
-                <div class="cp-subtitle">${tpl.subtitle}</div>`;
+                <div class="cp-subtitle">${tpl.subtitle}</div>
+                ${ro && d.edit_history && d.edit_history.length
+                    ? `<div class="cp-hint" style="text-align:center;">Last edited ${formatDate(d.edit_history[d.edit_history.length - 1].edited_at.slice(0, 10))}${d.edit_history.length > 1 ? ` (edited ${d.edit_history.length} times)` : ''}</div>`
+                    : ''}`;
 
             tpl.sections.forEach(sec => {
                 if (sec.t === 'patient') {
@@ -3173,8 +3178,17 @@
             consentPaper.classList.toggle('readonly', ro);
             document.getElementById('consent-form-heading').textContent = ro
                 ? `${tpl.shortName} — ${record.client_name}`
-                : `New ${tpl.shortName} Consent`;
+                : editingRecord
+                    ? `Edit ${tpl.shortName} — ${editingRecord.client_name}`
+                    : `New ${tpl.shortName} Consent`;
             consentSaveBtn.style.display = ro ? 'none' : 'inline-flex';
+            consentSaveBtn.innerHTML = editingRecord
+                ? '<i class="fa-solid fa-floppy-disk"></i> Save Changes'
+                : '<i class="fa-solid fa-floppy-disk"></i> Save Form';
+            // Only the Treatment Record can be edited after saving. The forms the client signs
+            // (consent, medical history) stay exactly as she signed them.
+            document.getElementById('consent-edit-btn').style.display = (ro && key === 'treatment') ? 'inline-flex' : 'none';
+            document.getElementById('consent-cancel-edit-btn').style.display = (!ro && editingRecord) ? 'inline-flex' : 'none';
             consentFormError.classList.remove('active');
 
             if (ro) {
@@ -3528,6 +3542,8 @@
         }
 
         let consentReturnTo = null; // 'clients' = go back to the open client profile
+        let viewedRecord = null;    // the saved form currently on screen (read-only), so Edit can reopen it
+        let editingRecord = null;   // set while a saved Treatment Record is being edited
 
         function switchView(target) {
             navLinks.forEach(l => l.classList.toggle('active', l.getAttribute('data-view') === target));
@@ -3541,6 +3557,8 @@
         }
 
         function consentGoBack() {
+            editingRecord = null;
+            viewedRecord = null;
             showConsentList();
             if (consentReturnTo === 'clients' && currentClientName) {
                 switchView('clients');
@@ -3550,6 +3568,8 @@
         }
 
         function openConsentForm(key, prefill, returnTo) {
+            editingRecord = null;
+            viewedRecord = null;
             consentReturnTo = returnTo || null;
             switchView('consent');
             consentListPanel.style.display = 'none';
@@ -3562,6 +3582,8 @@
             const { data, error } = await supabaseClient.from('consent_records').select('*').eq('id', id).single();
             if (error || !data) return;
             consentReturnTo = returnTo || null;
+            viewedRecord = data;
+            editingRecord = null;
             switchView('consent');
             consentListPanel.style.display = 'none';
             consentFormPanel.style.display = 'block';
@@ -3586,6 +3608,39 @@
             }
 
             consentSaveBtn.disabled = true;
+
+            // Saving changes to an existing Treatment Record: update that row, and keep the
+            // version as it was before this edit, so the original is never lost.
+            if (editingRecord) {
+                const { edit_history: earlier = [], ...previous } = editingRecord.data || {};
+                data.edit_history = [...earlier, { edited_at: new Date().toISOString(), previous }];
+
+                const { error: updateError } = await supabaseClient.from('consent_records')
+                    .update({ client_name: data.patient_name, data })
+                    .eq('id', editingRecord.id);
+                if (!updateError && data.patient_name !== editingRecord.client_name) {
+                    await supabaseClient.from('clients').upsert(
+                        { name: data.patient_name },
+                        { onConflict: 'name', ignoreDuplicates: true }
+                    );
+                }
+                consentSaveBtn.disabled = false;
+
+                if (updateError) {
+                    consentFormError.textContent = updateError.message;
+                    consentFormError.classList.add('active');
+                    return;
+                }
+
+                const savedId = editingRecord.id;
+                editingRecord = null;
+                await viewConsentRecord(savedId, consentReturnTo); // back to the saved view, now updated
+                loadDashboard();
+                loadConsentRecords();
+                loadClients();
+                return;
+            }
+
             const { error } = await supabaseClient.from('consent_records').insert({
                 template_key: currentTemplateKey,
                 client_name: data.patient_name,
@@ -3608,6 +3663,47 @@
             loadDashboard();
             loadConsentRecords();
             loadClients();
+        });
+
+        // ---- Editing a saved Treatment Record ----
+        // Draws a saved image (face chart markings, signature) back onto its canvas so it
+        // can be added to or erased. Resolves once drawn, so Save can wait for it: saving
+        // before the image is on the canvas would silently lose it.
+        function loadImageIntoPad(pad, src) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => {
+                    pad.ctx.save();
+                    pad.ctx.setTransform(1, 0, 0, 1, 0, 0);
+                    pad.ctx.drawImage(img, 0, 0, pad.canvas.width, pad.canvas.height);
+                    pad.ctx.restore();
+                    pad.dirty = true;
+                    resolve();
+                };
+                img.onerror = resolve; // a broken image should not block editing the rest
+                img.src = src;
+            });
+        }
+
+        document.getElementById('consent-edit-btn').addEventListener('click', async () => {
+            if (!viewedRecord || viewedRecord.template_key !== 'treatment') return;
+            const record = viewedRecord;
+            editingRecord = record;
+            renderConsentForm(record.template_key, null, record.data);
+
+            consentSaveBtn.disabled = true;
+            await Promise.all(Object.entries(sigPads)
+                .filter(([key]) => record.data && record.data[key])
+                .map(([key, pad]) => loadImageIntoPad(pad, record.data[key])));
+            consentSaveBtn.disabled = false;
+            window.scrollTo(0, 0);
+        });
+
+        document.getElementById('consent-cancel-edit-btn').addEventListener('click', () => {
+            if (!editingRecord) return;
+            const id = editingRecord.id;
+            editingRecord = null;
+            viewConsentRecord(id, consentReturnTo); // reload the saved version, discarding unsaved changes
         });
 
         document.getElementById('consent-back-btn').addEventListener('click', consentGoBack);
